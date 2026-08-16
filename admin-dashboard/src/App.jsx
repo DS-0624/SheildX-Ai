@@ -62,12 +62,8 @@ export default function App() {
   const audioAnalyserRef = useRef(null);
   const audioAnimFrameRef = useRef(null);
 
-  // --- Real Emergency Contacts ---
-  const [emergencyContacts, setEmergencyContacts] = useState([
-    { id: 'c1', name: 'Mom', email: 'mom@example.com', phone: '+919876543211', relationship: 'Mother', isVerified: true, sendWhatsapp: true, sendEmail: true },
-    { id: 'c2', name: 'Dad', email: 'dad@example.com', phone: '+919876543212', relationship: 'Father', isVerified: true, sendWhatsapp: true, sendEmail: true },
-    { id: 'c3', name: 'Hostel Warden', email: 'warden@college.edu', phone: '+919876543213', relationship: 'Hostel Authority', isVerified: true, sendWhatsapp: true, sendEmail: true }
-  ]);
+  // --- Real Custom Emergency Contacts (Default empty list — user adds custom contacts) ---
+  const [emergencyContacts, setEmergencyContacts] = useState([]);
 
   const [contactForm, setContactForm] = useState({ name: '', email: '', phone: '', relationship: 'Family' });
   const [editingContactId, setEditingContactId] = useState(null);
@@ -234,8 +230,8 @@ export default function App() {
       id: 'LOG-101',
       timestamp: new Date(Date.now() - 3600000).toLocaleTimeString(),
       category: 'SYSTEM',
-      event: 'ShieldX AI Safety Engine Active',
-      details: 'Phone OTP Authentication & Live Emergency Tracking Active'
+      event: 'ShieldX AI Automatic Dispatch Engine Active',
+      details: 'WhatsApp location links dynamically use live domain origin'
     }
   ]);
 
@@ -270,7 +266,7 @@ export default function App() {
           isVibrating: true
         }));
       } else {
-        logAudit('EMERGENCY_ESCALATION', 'Check #3 Unanswered — AUTOMATIC ESCALATION', 'User did not respond to 3 safety checks. Dispatching WhatsApp location messages & emergency emails.');
+        logAudit('EMERGENCY_ESCALATION', 'Check #3 Unanswered — AUTOMATIC ESCALATION', 'User did not respond to 3 safety checks. Dispatching WhatsApp location messages.');
         triggerEmergencyEscalation('SAFETY_CHECK_EXPIRED', 'No response after 3 consecutive private safety check attempts (90s total)');
       }
     }
@@ -293,7 +289,7 @@ export default function App() {
 
     setIsSendingOtp(true);
     
-    // Generate real 6-digit secret OTP code on server (NOT displayed on screen!)
+    // Generate real 6-digit secret OTP code on server
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     setServerOtp(code);
 
@@ -321,7 +317,6 @@ export default function App() {
     setAuthError('');
     const entered = otpDigits.join('');
     
-    // Strict Verification: Compares against actual server-sent secret OTP
     if (entered === serverOtp || entered === '889900') {
       const formattedPhone = loginPhone.startsWith('+') ? loginPhone : `+91 ${loginPhone}`;
       setUserProfile({
@@ -613,7 +608,7 @@ export default function App() {
     // 1. Direct Real Google Maps GPS link (works 100% on any device globally)
     const googleMapsUrl = `https://maps.google.com/?q=${lat},${lng}`;
     
-    // 2. Real Dynamic Local Origin Live Tracking link (resolves locally in running browser!)
+    // 2. Real Dynamic Live Origin Tracking link (grabs current window.location.origin!)
     const currentOrigin = window.location.origin;
     const localTrackingUrl = `${currentOrigin}/?track=${token}`;
 
@@ -641,7 +636,6 @@ export default function App() {
     setActiveTab('guardian_hub');
 
     logAudit('WHATSAPP_DISPATCH', `WhatsApp Emergency Messages Generated for ${userProfile.name}`, `Google Maps: ${googleMapsUrl}`);
-    logAudit('EMAIL_SERVICE', `Emergency Emails Dispatched for ${userProfile.name}`, emergencyContacts.map(c => c.email).join(', '));
 
     if (autoOpenWhatsapp && contactWaLinks.length > 0) {
       setTimeout(() => {
@@ -708,23 +702,33 @@ export default function App() {
   const handleSaveContact = () => {
     if (!contactForm.name || !contactForm.phone) return;
 
+    let savedContact;
     if (editingContactId) {
-      setEmergencyContacts(emergencyContacts.map(c => c.id === editingContactId ? { ...c, ...contactForm } : c));
+      savedContact = { ...contactForm, id: editingContactId, isVerified: true, sendWhatsapp: true, sendEmail: true };
+      setEmergencyContacts(emergencyContacts.map(c => c.id === editingContactId ? savedContact : c));
       logAudit('CONTACTS', `Updated Emergency Contact: ${contactForm.name}`, contactForm.phone);
     } else {
-      const newC = {
+      savedContact = {
         id: `c_${Date.now()}`,
         ...contactForm,
         isVerified: true,
         sendWhatsapp: true,
         sendEmail: true
       };
-      setEmergencyContacts([...emergencyContacts, newC]);
-      logAudit('CONTACTS', `Added New Emergency Contact: ${contactForm.name}`, contactForm.phone);
+      setEmergencyContacts([...emergencyContacts, savedContact]);
+      logAudit('CONTACTS', `Added New Custom Emergency Contact: ${contactForm.name}`, contactForm.phone);
     }
 
     setContactForm({ name: '', email: '', phone: '', relationship: 'Family' });
     setEditingContactId(null);
+
+    // Auto-dispatch test message link to WhatsApp if autoOpenWhatsapp is ON
+    if (autoOpenWhatsapp && savedContact.phone) {
+      const waLink = getWhatsAppLinkForContact(savedContact);
+      setTimeout(() => {
+        window.open(waLink, '_blank');
+      }, 500);
+    }
   };
 
   const handleDeleteContact = (id) => {
@@ -754,6 +758,7 @@ export default function App() {
     const lng = journeyState.currentLocation.lng;
     const googleMapsUrl = `https://maps.google.com/?q=${lat},${lng}`;
     
+    // Dynamic Origin URL (uses https://sheildx-ai.onrender.com automatically in production!)
     const currentOrigin = window.location.origin;
     const trackingUrl = trackingSession ? `${currentOrigin}/?track=${trackingSession.token}` : `${currentOrigin}/?track=live_session`;
 
@@ -1445,7 +1450,7 @@ export default function App() {
                         ✓ Yes, I'm Safe (Continue Route)
                       </button>
                       <button className="btn-danger" onClick={handleManualSOSNow} style={{ padding: '8px 16px', width: 'auto', fontSize: '13px' }}>
-                        🚨 Send WhatsApp & Email Alert Now
+                        🚨 Send WhatsApp Alert Now
                       </button>
                     </div>
                   </div>
@@ -1564,23 +1569,23 @@ export default function App() {
           </div>
         )}
 
-        {/* -------------------- TAB 4: REAL EMERGENCY CONTACTS MANAGER -------------------- */}
+        {/* -------------------- TAB 4: REAL EMERGENCY CONTACTS MANAGER (CUSTOM CONTACTS) -------------------- */}
         {activeTab === 'contacts_manager' && (
           <div className="grid-2">
             <div className="card">
               <h2 className="card-title">
                 {editingContactId ? <Edit3 color="#3b82f6" size={20} /> : <Plus color="#10b981" size={20} />}
-                {editingContactId ? 'Edit Emergency Contact' : `Add Emergency Contact for ${userProfile.name}`}
+                {editingContactId ? 'Edit Emergency Contact' : `Add Real Emergency Contact for ${userProfile.name}`}
               </h2>
 
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8' }}>CONTACT NAME</label>
-                <input className="input-field" value={contactForm.name} onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })} placeholder="e.g. Mom, Dad, Brother..." />
+                <input className="input-field" value={contactForm.name} onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })} placeholder="e.g. Mom, Dad, Brother, Friend..." />
               </div>
 
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8' }}>WHATSAPP PHONE NUMBER (WITH COUNTRY CODE)</label>
-                <input className="input-field" value={contactForm.phone} onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })} placeholder="e.g. +91 98765 43210 or +1 555 0199" />
+                <input className="input-field" value={contactForm.phone} onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })} placeholder="e.g. +91 90630 80406 or +91 98765 43210" />
               </div>
 
               <div style={{ marginBottom: '12px' }}>
@@ -1600,7 +1605,7 @@ export default function App() {
 
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button className="btn-success" onClick={handleSaveContact} style={{ padding: '12px' }}>
-                  {editingContactId ? 'Update Contact' : 'Save Emergency Contact'}
+                  {editingContactId ? 'Update Contact' : 'Save & Enable Auto WhatsApp Message'}
                 </button>
                 {editingContactId && (
                   <button className="btn-primary" onClick={() => { setEditingContactId(null); setContactForm({ name: '', email: '', phone: '', relationship: 'Family' }); }} style={{ background: '#334155', width: 'auto' }}>
@@ -1613,34 +1618,44 @@ export default function App() {
             <div className="card">
               <h2 className="card-title"><Phone color="#25D366" size={20} /> Registered Emergency Contacts for {userProfile.name} ({emergencyContacts.length})</h2>
               
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {emergencyContacts.map((contact) => (
-                  <div key={contact.id} style={{ background: '#0b1220', padding: '14px', borderRadius: '12px', border: '1px solid #23314e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <div style={{ fontSize: '14px', fontWeight: '800', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        {contact.name}
-                        <span className="badge badge-emerald" style={{ fontSize: '10px' }}>{contact.relationship}</span>
+              {emergencyContacts.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {emergencyContacts.map((contact) => (
+                    <div key={contact.id} style={{ background: '#0b1220', padding: '14px', borderRadius: '12px', border: '1px solid #23314e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: '800', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          {contact.name}
+                          <span className="badge badge-emerald" style={{ fontSize: '10px' }}>{contact.relationship}</span>
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#34d399', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <MessageCircle size={12} color="#25D366" /> {contact.phone}
+                        </div>
                       </div>
-                      <div style={{ fontSize: '12px', color: '#34d399', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <MessageCircle size={12} color="#25D366" /> {contact.phone}
-                      </div>
-                    </div>
 
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                      <a
-                        href={getWhatsAppLinkForContact(contact)}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{ background: '#0d2818', color: '#25D366', border: '1px solid #25D366', borderRadius: '8px', padding: '6px 10px', fontSize: '11px', fontWeight: 'bold', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
-                      >
-                        <MessageCircle size={12} /> Test WA
-                      </a>
-                      <button onClick={() => handleEditContact(contact)} style={{ background: '#1e293b', color: '#60a5fa', border: 'none', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer', fontSize: '12px' }}><Edit3 size={14} /></button>
-                      <button onClick={() => handleDeleteContact(contact.id)} style={{ background: '#2c0b0e', color: '#ef4444', border: 'none', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer', fontSize: '12px' }}><Trash2 size={14} /></button>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <a
+                          href={getWhatsAppLinkForContact(contact)}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ background: '#0d2818', color: '#25D366', border: '1px solid #25D366', borderRadius: '8px', padding: '6px 10px', fontSize: '11px', fontWeight: 'bold', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        >
+                          <MessageCircle size={12} /> Auto WA Link
+                        </a>
+                        <button onClick={() => handleEditContact(contact)} style={{ background: '#1e293b', color: '#60a5fa', border: 'none', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer', fontSize: '12px' }}><Edit3 size={14} /></button>
+                        <button onClick={() => handleDeleteContact(contact.id)} style={{ background: '#2c0b0e', color: '#ef4444', border: 'none', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer', fontSize: '12px' }}><Trash2 size={14} /></button>
+                      </div>
                     </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '36px 16px', background: '#0b1220', borderRadius: '12px', border: '1px border #1a253b', color: '#94a3b8' }}>
+                  <Phone size={36} color="#64748b" style={{ marginBottom: '10px' }} />
+                  <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#ffffff' }}>No Emergency Contacts Added</div>
+                  <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
+                    Add your real family or trusted contacts on the left. When an alert triggers, automatic WhatsApp messages will be dispatched to your contacts with your live tracking URL!
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1840,24 +1855,30 @@ export default function App() {
                     <h4 style={{ color: '#25D366', marginBottom: '10px', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <MessageCircle size={18} color="#25D366" /> Automatic WhatsApp Location Dispatch Links:
                     </h4>
-                    <div className="grid-2" style={{ gap: '10px' }}>
-                      {emergencyContacts.map((c) => (
-                        <div key={c.id} style={{ background: '#132e20', padding: '12px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div>
-                            <div style={{ fontSize: '13px', fontWeight: '700', color: '#ffffff' }}>{c.name} ({c.relationship})</div>
-                            <div style={{ fontSize: '11px', color: '#34d399' }}>{c.phone}</div>
+                    {emergencyContacts.length > 0 ? (
+                      <div className="grid-2" style={{ gap: '10px' }}>
+                        {emergencyContacts.map((c) => (
+                          <div key={c.id} style={{ background: '#132e20', padding: '12px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                              <div style={{ fontSize: '13px', fontWeight: '700', color: '#ffffff' }}>{c.name} ({c.relationship})</div>
+                              <div style={{ fontSize: '11px', color: '#34d399' }}>{c.phone}</div>
+                            </div>
+                            <a
+                              href={getWhatsAppLinkForContact(c)}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{ background: '#25D366', color: '#ffffff', borderRadius: '6px', padding: '8px 12px', fontSize: '11px', fontWeight: 'bold', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            >
+                              <Share2 size={12} /> Send WhatsApp Alert
+                            </a>
                           </div>
-                          <a
-                            href={getWhatsAppLinkForContact(c)}
-                            target="_blank"
-                            rel="noreferrer"
-                            style={{ background: '#25D366', color: '#ffffff', borderRadius: '6px', padding: '8px 12px', fontSize: '11px', fontWeight: 'bold', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
-                          >
-                            <Share2 size={12} /> Send WhatsApp Alert
-                          </a>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: '12px', color: '#94a3b8', fontStyle: 'italic' }}>
+                        No custom emergency contacts added. Please add your emergency contacts in the "Emergency Contacts" tab.
+                      </div>
+                    )}
                   </div>
 
                   <button className="btn-success" onClick={handleResolveEmergency} style={{ padding: '14px', fontSize: '16px', fontWeight: 'bold' }}>
@@ -1873,78 +1894,6 @@ export default function App() {
                   </button>
                 </div>
               )}
-            </div>
-          </div>
-        )}
-
-        {/* -------------------- TAB 8: REAL PUBLIC EMERGENCY LIVE TRACKING VIEW -------------------- */}
-        {activeTab === 'public_tracking' && (
-          <div style={{ maxWidth: '960px', margin: '0 auto' }}>
-            <div className="card" style={{ border: '2px solid #ef4444', background: '#0b0f19' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #23314e', paddingBottom: '16px', marginBottom: '20px' }}>
-                <div>
-                  <span className="badge badge-rose" style={{ fontSize: '12px', padding: '4px 12px', marginBottom: '8px' }}>
-                    LIVE GUARDIAN GPS STREAM ACTIVE
-                  </span>
-                  <h2 style={{ fontSize: '24px', fontWeight: '900', color: '#ffffff', marginTop: '4px' }}>
-                    Emergency Live Location: {userProfile.name}
-                  </h2>
-                  <div style={{ fontSize: '12px', color: '#cbd5e1', marginTop: '2px' }}>
-                    Phone: <strong>{userProfile.phone}</strong> • Token: <code style={{ color: '#60a5fa' }}>{trackingSession ? trackingSession.token : 'trk_active_901'}</code>
-                  </div>
-                </div>
-
-                <div style={{ textAlign: 'right' }}>
-                  <button className="btn-danger" onClick={() => setActiveTab('guardian_hub')} style={{ width: 'auto', fontSize: '12px', padding: '8px 14px' }}>
-                    Back to Hub
-                  </button>
-                </div>
-              </div>
-
-              {/* Real Leaflet Live Map Stream */}
-              <div style={{ marginBottom: '20px' }}>
-                <RealMap
-                  startPos={{ lat: journeyForm.startLat, lng: journeyForm.startLng, label: `🟢 ${userProfile.name} (Start Location)` }}
-                  destPos={{ lat: journeyForm.destinationLat, lng: journeyForm.destinationLng, label: `🔴 ${journeyForm.destinationName}` }}
-                  currentPos={journeyState.currentLocation}
-                  routePoints={computedRoutePoints}
-                  isDeviating={true}
-                  accuracyMeters={journeyState.currentLocation.accuracy || 10}
-                  height="380px"
-                  onLocationFound={handleRealDeviceGPSFound}
-                />
-              </div>
-
-              {/* Emergency Contact & Police Quick Actions */}
-              <div className="grid-3" style={{ gap: '12px', marginBottom: '20px' }}>
-                <a
-                  href={`tel:112`}
-                  style={{ background: '#ef4444', color: '#ffffff', borderRadius: '12px', padding: '14px', textAlign: 'center', fontWeight: 'bold', fontSize: '14px', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                >
-                  <Phone size={18} /> CALL POLICE (112)
-                </a>
-
-                <a
-                  href={`https://maps.google.com/?q=${journeyState.currentLocation.lat},${journeyState.currentLocation.lng}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{ background: '#3b82f6', color: '#ffffff', borderRadius: '12px', padding: '14px', textAlign: 'center', fontWeight: 'bold', fontSize: '14px', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                >
-                  <Navigation size={18} /> OPEN IN GOOGLE MAPS
-                </a>
-
-                <button
-                  onClick={handleCopyTrackingLink}
-                  style={{ background: '#10b981', color: '#ffffff', border: 'none', borderRadius: '12px', padding: '14px', textAlign: 'center', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                >
-                  <Share2 size={18} /> {copiedLinkNotification ? '✓ LINK COPIED!' : 'SHARE LIVE LOCATION'}
-                </button>
-              </div>
-
-              <div style={{ background: '#131c2e', borderRadius: '12px', padding: '16px', border: '1px solid #23314e', fontSize: '12px', color: '#cbd5e1' }}>
-                <div>📍 <strong>Last Reported Location:</strong> {journeyState.currentLocation.lat.toFixed(4)}° N, {journeyState.currentLocation.lng.toFixed(4)}° E</div>
-                <div>⏱️ <strong>Last Updated:</strong> Just now ({new Date().toLocaleTimeString()}) • Device Battery: 88% 🔋</div>
-              </div>
             </div>
           </div>
         )}
@@ -1972,7 +1921,7 @@ export default function App() {
                 <div style={{ fontSize: '32px', fontWeight: '900', color: '#25D366', marginTop: '4px' }}>
                   {emergencyContacts.length}
                 </div>
-                <div style={{ fontSize: '11px', color: '#34d399', marginTop: '4px' }}>Verified & Dispatch Ready</div>
+                <div style={{ fontSize: '11px', color: '#34d399', marginTop: '4px' }}>Custom Contacts Configured</div>
               </div>
             </div>
 
