@@ -202,7 +202,7 @@ fun WearPrivateCheckScreen(
             Text("ARE YOU SAFE?", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
 
             Spacer(modifier = Modifier.height(2.dp))
-            Text("$timerSecondss", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color(0xFFEF4444))
+            Text("${timerSeconds}s", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color(0xFFEF4444))
 
             Spacer(modifier = Modifier.height(6.dp))
 
