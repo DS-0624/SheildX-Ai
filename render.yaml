@@ -1,11 +1,12 @@
 services:
   # ------------------------------------------------------------------
-  # 1. FastAPI Backend Web Service
+  # 1. FastAPI Backend Web Service (100% FREE PLAN - NO CREDIT CARD REQUIRED)
   # ------------------------------------------------------------------
   - type: web
     name: shieldx-ai-backend
     env: python
-    region: singapore # or oregon / frankfurt
+    plan: free
+    region: singapore
     buildCommand: cd backend && pip install -r requirements.txt && pip install email-validator
     startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
@@ -15,11 +16,12 @@ services:
         value: ShieldX AI Security Engine
 
   # ------------------------------------------------------------------
-  # 2. React PWA Frontend Static Site
+  # 2. React PWA Frontend Static Site (100% FREE PLAN - NO CREDIT CARD REQUIRED)
   # ------------------------------------------------------------------
   - type: web
     name: shieldx-ai-frontend
     env: static
+    plan: free
     buildCommand: cd admin-dashboard && npm install && npm run build
     staticPublishPath: admin-dashboard/dist
     routes:
