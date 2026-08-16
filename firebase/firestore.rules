@@ -1,0 +1,97 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Default Deny All Policy
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.role == 'ADMIN';
+    }
+    
+    function isAuthorizedGuardian(childUid) {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/guardian_relationships/$(request.auth.uid + '_' + childUid));
+    }
+    
+    // User Documents
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAuthorizedGuardian(userId) || isAdmin();
+      allow create: if isAuthenticated();
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
+      
+      // Subcollections
+      match /emergencyContacts/{contactId} {
+        allow read, write: if isOwner(userId);
+      }
+      
+      match /voiceCodes/{voiceCodeId} {
+        allow read, write: if isOwner(userId);
+      }
+      
+      match /journeys/{journeyId} {
+        allow read: if isOwner(userId) || isAuthorizedGuardian(userId) || isAdmin();
+        allow write: if isOwner(userId);
+      }
+    }
+    
+    // Global Journeys Collection
+    match /journeys/{journeyId} {
+      allow read: if isAuthenticated() && (
+        resource.data.owner_uid == request.auth.uid || 
+        isAuthorizedGuardian(resource.data.owner_uid) || 
+        isAdmin()
+      );
+      allow create: if isAuthenticated() && request.resource.data.owner_uid == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        resource.data.owner_uid == request.auth.uid || isAdmin()
+      );
+    }
+    
+    // Emergency Events
+    match /emergency_events/{eventId} {
+      allow read: if isAuthenticated() && (
+        resource.data.owner_uid == request.auth.uid || 
+        isAuthorizedGuardian(resource.data.owner_uid) || 
+        isAdmin()
+      );
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        resource.data.owner_uid == request.auth.uid || 
+        isAuthorizedGuardian(resource.data.owner_uid) || 
+        isAdmin()
+      );
+    }
+    
+    // Guardian Relationships & Invitations
+    match /guardian_relationships/{relationshipId} {
+      allow read: if isAuthenticated() && (
+        resource.data.parent_uid == request.auth.uid || 
+        resource.data.child_uid == request.auth.uid || 
+        isAdmin()
+      );
+      allow create, update: if isAuthenticated();
+    }
+    
+    match /guardian_invitations/{code} {
+      allow read, create, delete: if isAuthenticated();
+    }
+    
+    // Voice Codes
+    match /voice_codes/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+  }
+}
