@@ -9,8 +9,10 @@ import {
 import RealMap from './components/RealMap';
 
 export default function App() {
-  // --- AUTHENTICATION & LOGIN STATE ---
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // --- AUTHENTICATION & LOGIN STATE (PERSISTED IN LOCALSTORAGE) ---
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem('shieldx_auth') === 'true';
+  });
   const [authStep, setAuthStep] = useState('PHONE_INPUT'); // 'PHONE_INPUT' or 'OTP_INPUT'
   const [loginPhone, setLoginPhone] = useState('');
   const [loginName, setLoginName] = useState('');
@@ -39,16 +41,22 @@ export default function App() {
   const checkIntervalSeconds = presentationSpeed ? 3 : 30;
   const [autoOpenWhatsapp, setAutoOpenWhatsapp] = useState(true);
 
-  // --- Dynamic Authenticated User Profile ---
-  const [userProfile, setUserProfile] = useState({
-    name: 'Ananya Sharma',
-    email: 'ananya@sheildx.app',
-    phone: '+91 98765 43210',
-    role: 'TRAVELER',
-    voicePhrase: 'Asha',
-    voiceTriggerType: 'PRIVATE_CHECK',
-    voiceEnabled: true,
-    micPermission: 'PROMPT'
+  // --- Dynamic Authenticated User Profile (PERSISTED) ---
+  const [userProfile, setUserProfile] = useState(() => {
+    const saved = localStorage.getItem('shieldx_user_profile');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return {
+      name: 'Ananya Sharma',
+      email: 'ananya@sheildx.app',
+      phone: '+91 98765 43210',
+      role: 'TRAVELER',
+      voicePhrase: 'Asha',
+      voiceTriggerType: 'PRIVATE_CHECK',
+      voiceEnabled: true,
+      micPermission: 'PROMPT'
+    };
   });
 
   // --- REAL WEB SPEECH RECOGNITION & MICROPHONE AUDIO SPECTRUM STATE ---
@@ -62,8 +70,14 @@ export default function App() {
   const audioAnalyserRef = useRef(null);
   const audioAnimFrameRef = useRef(null);
 
-  // --- Real Custom Emergency Contacts (Default empty list — user adds custom contacts) ---
-  const [emergencyContacts, setEmergencyContacts] = useState([]);
+  // --- Real Custom Emergency Contacts (PERSISTED IN LOCALSTORAGE) ---
+  const [emergencyContacts, setEmergencyContacts] = useState(() => {
+    const saved = localStorage.getItem('shieldx_emergency_contacts');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return [];
+  });
 
   const [contactForm, setContactForm] = useState({ name: '', email: '', phone: '', relationship: 'Family' });
   const [editingContactId, setEditingContactId] = useState(null);
@@ -146,6 +160,19 @@ export default function App() {
       setShowPublicTrackingOnly(true);
     }
   }, []);
+
+  // AUTO-SAVE STATE TO LOCALSTORAGE SO REFRESH NEVER LOSES YOUR LOGIN OR SAVED CONTACTS
+  useEffect(() => {
+    localStorage.setItem('shieldx_auth', isAuthenticated ? 'true' : 'false');
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    localStorage.setItem('shieldx_user_profile', JSON.stringify(userProfile));
+  }, [userProfile]);
+
+  useEffect(() => {
+    localStorage.setItem('shieldx_emergency_contacts', JSON.stringify(emergencyContacts));
+  }, [emergencyContacts]);
 
   // Debounced auto-search for worldwide geocoding
   useEffect(() => {
@@ -370,6 +397,7 @@ export default function App() {
     setOtpDigits(['', '', '', '', '', '']);
     setServerOtp('');
     setAuthError('');
+    localStorage.removeItem('shieldx_auth');
     logAudit('AUTH_LOGOUT', `User ${userProfile.name} Logged Out`, '');
   };
 
