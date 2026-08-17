@@ -996,23 +996,56 @@ export default function App() {
                 )}
               </div>
 
-              {/* 6 Individual OTP Boxes */}
-              <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginBottom: '24px' }}>
+              {/* 6 Individual OTP Boxes with 1-Click Clipboard Paste Support */}
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginBottom: '16px' }}>
                 {[0, 1, 2, 3, 4, 5].map((idx) => (
                   <input
                     key={idx}
                     id={`otp-${idx}`}
                     type="text"
-                    maxLength={1}
+                    maxLength={6}
                     value={otpDigits[idx]}
+                    onPaste={(e) => {
+                      e.preventDefault();
+                      const pasteText = e.clipboardData.getData('text').replace(/[^0-9]/g, '').slice(0, 6);
+                      if (pasteText.length > 0) {
+                        const updated = ['', '', '', '', '', ''];
+                        for (let i = 0; i < pasteText.length; i++) {
+                          updated[i] = pasteText[i];
+                        }
+                        setOtpDigits(updated);
+                        const lastIdx = Math.min(pasteText.length - 1, 5);
+                        const lastEl = document.getElementById(`otp-${lastIdx}`);
+                        if (lastEl) lastEl.focus();
+                      }
+                    }}
                     onChange={(e) => {
-                      const val = e.target.value;
-                      const updated = [...otpDigits];
-                      updated[idx] = val;
-                      setOtpDigits(updated);
-                      if (val && idx < 5) {
-                        const nextInput = document.getElementById(`otp-${idx + 1}`);
-                        if (nextInput) nextInput.focus();
+                      const raw = e.target.value.replace(/[^0-9]/g, '');
+                      if (raw.length > 1) {
+                        // User pasted or typed multiple digits into single box
+                        const digits = raw.slice(0, 6);
+                        const updated = ['', '', '', '', '', ''];
+                        for (let i = 0; i < digits.length; i++) {
+                          updated[i] = digits[i];
+                        }
+                        setOtpDigits(updated);
+                        const lastIdx = Math.min(digits.length - 1, 5);
+                        const lastEl = document.getElementById(`otp-${lastIdx}`);
+                        if (lastEl) lastEl.focus();
+                      } else {
+                        const updated = [...otpDigits];
+                        updated[idx] = raw;
+                        setOtpDigits(updated);
+                        if (raw && idx < 5) {
+                          const nextInput = document.getElementById(`otp-${idx + 1}`);
+                          if (nextInput) nextInput.focus();
+                        }
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Backspace' && !otpDigits[idx] && idx > 0) {
+                        const prevInput = document.getElementById(`otp-${idx - 1}`);
+                        if (prevInput) prevInput.focus();
                       }
                     }}
                     style={{
@@ -1029,6 +1062,28 @@ export default function App() {
                   />
                 ))}
               </div>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const clipText = await navigator.clipboard.readText();
+                    const digits = clipText.replace(/[^0-9]/g, '').slice(0, 6);
+                    if (digits.length > 0) {
+                      const updated = ['', '', '', '', '', ''];
+                      for (let i = 0; i < digits.length; i++) {
+                        updated[i] = digits[i];
+                      }
+                      setOtpDigits(updated);
+                    }
+                  } catch (err) {
+                    console.warn('Clipboard read error:', err);
+                  }
+                }}
+                style={{ background: '#1e293b', color: '#60a5fa', border: '1px solid #3b82f6', borderRadius: '8px', padding: '8px 16px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', margin: '0 auto 16px auto', width: 'auto' }}
+              >
+                <Copy size={14} /> Paste Copied OTP Code from Clipboard
+              </button>
 
               <button
                 type="submit"
