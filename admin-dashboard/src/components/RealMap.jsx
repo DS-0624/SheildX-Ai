@@ -40,30 +40,21 @@ export default function RealMap({
     DARK: {
       url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
       attribution: '&copy; CARTO & OpenStreetMap',
-      maxNativeZoom: 19,
-      maxZoom: 20,
       label: '🌙 Dark'
     },
     SATELLITE: {
       url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-      labelUrl: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png',
-      attribution: 'Tiles &copy; Esri HD Satellite + Street Labels',
-      maxNativeZoom: 18,
-      maxZoom: 20,
-      label: '🛰️ Satellite + Streets'
+      attribution: 'Tiles &copy; Esri &mdash; HD Satellite Photography',
+      label: '🛰️ Satellite'
     },
     STREET: {
       url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
       attribution: '&copy; OpenStreetMap contributors',
-      maxNativeZoom: 19,
-      maxZoom: 20,
       label: '🗺️ Street View'
     },
     LIGHT: {
       url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
       attribution: '&copy; CARTO & OpenStreetMap',
-      maxNativeZoom: 19,
-      maxZoom: 20,
       label: '☀️ Day Light'
     }
   };
@@ -79,23 +70,17 @@ export default function RealMap({
     if (!mapInstanceRef.current) {
       const map = L.map(mapContainerRef.current, {
         center: [currentPos.lat || startPos.lat, currentPos.lng || startPos.lng],
-        zoom: 14,
-        maxZoom: 20,
+        zoom: 13,
         zoomControl: interactive,
         dragging: interactive,
         touchZoom: interactive,
-        scrollWheelZoom: interactive,
-        zoomAnimation: true,
-        fadeAnimation: true,
-        markerZoomAnimation: true,
-        wheelPxPerZoomLevel: 60
+        scrollWheelZoom: interactive
       });
 
       const initialProvider = tileProviders[mapStyle] || tileProviders.DARK;
       const tileLayer = L.tileLayer(initialProvider.url, {
         attribution: initialProvider.attribution,
-        maxNativeZoom: initialProvider.maxNativeZoom,
-        maxZoom: initialProvider.maxZoom,
+        maxZoom: 19,
         subdomains: 'abcd'
       }).addTo(map);
 
@@ -105,30 +90,10 @@ export default function RealMap({
 
     const map = mapInstanceRef.current;
 
-    // Update Tile Layer & Street Labels Overlay if Style Changed
+    // Update Tile Layer if Style Changed
     if (tileLayerRef.current) {
-      try {
-        const provider = tileProviders[mapStyle] || tileProviders.DARK;
-        tileLayerRef.current.options.maxNativeZoom = provider.maxNativeZoom;
-        tileLayerRef.current.setUrl(provider.url);
-
-        if (labelLayerRef.current) {
-          try { map.removeLayer(labelLayerRef.current); } catch (e) {}
-          labelLayerRef.current = null;
-        }
-
-        if (provider.labelUrl) {
-          const labelLayer = L.tileLayer(provider.labelUrl, {
-            maxNativeZoom: 19,
-            maxZoom: 20,
-            subdomains: 'abcd',
-            zIndex: 500
-          }).addTo(map);
-          labelLayerRef.current = labelLayer;
-        }
-      } catch (err) {
-        console.warn('Leaflet tile update warning:', err);
-      }
+      const provider = tileProviders[mapStyle] || tileProviders.DARK;
+      tileLayerRef.current.setUrl(provider.url);
     }
 
     // Clear existing markers & lines
