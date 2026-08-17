@@ -212,8 +212,8 @@ export default function RealMap({
   };
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: height, borderRadius: '12px', overflow: 'hidden', border: '1px solid #23314e' }}>
-      <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
+    <div style={{ position: 'relative', zIndex: 1, isolation: 'isolate', width: '100%', height: height, borderRadius: '12px', overflow: 'hidden', border: '1px solid #23314e' }}>
+      <div ref={mapContainerRef} style={{ width: '100%', height: '100%', borderRadius: '12px' }} />
 
       {/* Tap Mode Banner Hint */}
       {tapMode && (
@@ -222,7 +222,7 @@ export default function RealMap({
           top: '12px',
           left: '50%',
           transform: 'translateX(-50%)',
-          zIndex: 1000,
+          zIndex: 10,
           background: tapMode === 'START' ? 'rgba(16, 185, 129, 0.95)' : 'rgba(239, 68, 68, 0.95)',
           color: '#ffffff',
           padding: '6px 16px',
@@ -245,7 +245,7 @@ export default function RealMap({
             position: 'absolute',
             bottom: '12px',
             right: '12px',
-            zIndex: 1000,
+            zIndex: 10,
             background: '#131b2e',
             color: '#3b82f6',
             border: '1px solid #23314e',

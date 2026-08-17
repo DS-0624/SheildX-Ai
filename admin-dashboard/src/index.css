@@ -26,6 +26,20 @@ body {
   width: 100%;
 }
 
+/* Leaflet Map Strict Isolation & Stacking Context (Fix Map Bleeding over Header) */
+.leaflet-container {
+  z-index: 1 !important;
+  border-radius: 12px;
+}
+
+.leaflet-top, .leaflet-bottom {
+  z-index: 10 !important;
+}
+
+.leaflet-pane {
+  z-index: 1 !important;
+}
+
 /* Animations */
 @keyframes pulse-vibrate {
   0% { transform: scale(1) rotate(0deg); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
@@ -49,7 +63,7 @@ body {
   animation: pulse-dot 1.5s infinite;
 }
 
-/* App Header - Fully Fluid & Mobile Responsive */
+/* App Header - High Priority Stacking (Always on Top) */
 .app-header {
   background-color: #0d1424;
   border-bottom: 1px solid var(--border-color);
@@ -61,8 +75,9 @@ body {
   gap: 12px;
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 99999;
   width: 100%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
 }
 
 .brand-container {
@@ -132,6 +147,8 @@ body {
   margin: 0 auto;
   padding: 20px 24px;
   width: 100%;
+  position: relative;
+  z-index: 1;
 }
 
 /* Smartwatch Simulator Frame */
@@ -173,6 +190,9 @@ body {
   margin-bottom: 20px;
   width: 100%;
   overflow: hidden;
+  position: relative;
+  z-index: 1;
+  isolation: isolate;
 }
 
 .card-title {
