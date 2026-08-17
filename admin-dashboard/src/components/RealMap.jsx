@@ -21,8 +21,7 @@ export default function RealMap({
   interactive = true,
   onLocationFound = null,
   onMapClick = null,
-  tapMode = null, // 'START' | 'DESTINATION' | null
-  onToggleMaximize = null
+  tapMode = null // 'START' | 'DESTINATION' | null
 }) {
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -30,7 +29,7 @@ export default function RealMap({
   const markersRef = useRef([]);
   const polylineRef = useRef(null);
   const deviationLineRef = useRef(null);
-  const labelLayerRef = useRef(null);
+  const circleRef = useRef(null);
 
   const [mapStyle, setMapStyle] = useState('DARK'); // 'DARK' | 'SATELLITE' | 'STREET' | 'LIGHT'
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -44,13 +43,13 @@ export default function RealMap({
     },
     SATELLITE: {
       url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-      attribution: 'Tiles &copy; Esri &mdash; HD Satellite Photography',
+      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
       label: '🛰️ Satellite'
     },
     STREET: {
       url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
       attribution: '&copy; OpenStreetMap contributors',
-      label: '🗺️ Street View'
+      label: '🗺️ Street'
     },
     LIGHT: {
       url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
@@ -330,13 +329,7 @@ export default function RealMap({
       }}>
         {/* Fullscreen Maximize / Exit Button */}
         <button
-          onClick={() => {
-            if (onToggleMaximize) {
-              onToggleMaximize();
-            } else {
-              setIsFullscreen(!isFullscreen);
-            }
-          }}
+          onClick={() => setIsFullscreen(!isFullscreen)}
           title={isFullscreen ? 'Exit Fullscreen Map View (or press ESC key)' : 'Maximize Map View (View Entire Route)'}
           style={{
             pointerEvents: 'auto',

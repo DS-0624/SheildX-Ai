@@ -6,21 +6,12 @@ import {
   MessageCircle, Plus, Trash2, Edit3, Save, Share2, Search, Target, Loader2, Volume2, Key,
   LogOut, ArrowRight, Smartphone, ShieldAlert, Check, Copy, ExternalLink as LinkIcon, Eye as ViewIcon
 } from 'lucide-react';
-const safeNumFixed = (val, decimals = 4) => {
-  if (val === null || val === undefined) return (0).toFixed(decimals);
-  const num = Number(val);
-  return isNaN(num) ? (0).toFixed(decimals) : num.toFixed(decimals);
-};
+import RealMap from './components/RealMap';
 
 export default function App() {
   // --- AUTHENTICATION & LOGIN STATE (PERSISTED IN LOCALSTORAGE) ---
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        return localStorage.getItem('shieldx_auth') === 'true';
-      }
-    } catch (e) {}
-    return false;
+    return localStorage.getItem('shieldx_auth') === 'true';
   });
   const [authStep, setAuthStep] = useState('PHONE_INPUT'); // 'PHONE_INPUT' or 'OTP_INPUT'
   const [loginPhone, setLoginPhone] = useState('');
@@ -50,31 +41,22 @@ export default function App() {
   const checkIntervalSeconds = presentationSpeed ? 3 : 30;
   const [autoOpenWhatsapp, setAutoOpenWhatsapp] = useState(true);
 
-  const defaultProfile = {
-    name: 'Shaik Sameer',
-    email: 'sameer@sheildx.app',
-    phone: '+91 90630 80406',
-    role: 'TRAVELER',
-    voicePhrase: 'sameer',
-    voiceTriggerType: 'PRIVATE_CHECK',
-    voiceEnabled: true,
-    micPermission: 'PROMPT'
-  };
-
-  // --- Dynamic Authenticated User Profile (PERSISTED WITH SAFE FALLBACKS) ---
+  // --- Dynamic Authenticated User Profile (PERSISTED) ---
   const [userProfile, setUserProfile] = useState(() => {
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const saved = localStorage.getItem('shieldx_user_profile');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (parsed && typeof parsed === 'object' && parsed.name) {
-            return { ...defaultProfile, ...parsed };
-          }
-        }
-      }
-    } catch (e) {}
-    return defaultProfile;
+    const saved = localStorage.getItem('shieldx_user_profile');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return {
+      name: 'Shaik Sameer',
+      email: 'sameer@sheildx.app',
+      phone: '+91 90630 80406',
+      role: 'TRAVELER',
+      voicePhrase: 'sam',
+      voiceTriggerType: 'IMMEDIATE_SOS',
+      voiceEnabled: true,
+      micPermission: 'PROMPT'
+    };
   });
 
   const userProfileRef = useRef(userProfile);
@@ -95,17 +77,15 @@ export default function App() {
 
   // --- Real Custom Emergency Contacts (PERSISTED IN LOCALSTORAGE) ---
   const [emergencyContacts, setEmergencyContacts] = useState(() => {
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const saved = localStorage.getItem('shieldx_emergency_contacts');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed)) {
-            return parsed.filter(c => !c.id.includes('c_default') && !c.id.includes('c_101'));
-          }
+    const saved = localStorage.getItem('shieldx_emergency_contacts');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter(c => !c.id.includes('c_default') && !c.id.includes('c_101'));
         }
-      }
-    } catch (e) {}
+      } catch (e) {}
+    }
     return [];
   });
 
@@ -145,7 +125,6 @@ export default function App() {
   });
 
   const [mapTapMode, setMapTapMode] = useState(null);
-  const [showFullscreenMapModal, setShowFullscreenMapModal] = useState(false);
 
   // --- Real Geocoding Search State ---
   const [searchQuery, setSearchQuery] = useState('');
@@ -414,44 +393,30 @@ export default function App() {
     return () => clearInterval(t);
   }, [authStep, otpTimer]);
 
-  // --- REAL-TIME CONTINUOUS HIGH-ACCURACY GPS TRACKING ENGINE ---
+  // --- AUTOMATICALLY ACQUIRE REAL USER LIVE GPS POSITION ON APP LOAD ---
   useEffect(() => {
-    if (typeof window !== 'undefined' && navigator.geolocation) {
-      const watchId = navigator.geolocation.watchPosition(
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
         (pos) => {
-          const lat = Number(pos.coords.latitude.toFixed(6));
-          const lng = Number(pos.coords.longitude.toFixed(6));
-          const acc = pos.coords.accuracy || 8.5;
-
+          const lat = parseFloat(pos.coords.latitude.toFixed(4));
+          const lng = parseFloat(pos.coords.longitude.toFixed(4));
           setJourneyForm((prev) => ({
             ...prev,
             startLat: lat,
             startLng: lng,
             startName: 'My Live GPS Location (Where I am now)',
-            startAddress: `Exact GPS (${lat}° N, ${lng}° E) • ±${acc.toFixed(0)}m accuracy`
+            startAddress: `Current GPS Coordinates (${lat}° N, ${lng}° E)`
           }));
-
           setJourneyState((prev) => ({
             ...prev,
-            currentLocation: {
-              lat,
-              lng,
-              label: `📍 Live Location (±${acc.toFixed(0)}m accuracy)`,
-              accuracy: acc
-            }
+            currentLocation: { lat, lng, label: 'My Live GPS Location', accuracy: pos.coords.accuracy }
           }));
         },
         (err) => {
-          console.warn('Real-time GPS tracking warning:', err.message);
+          console.warn('Auto GPS fetch error:', err.message);
         },
-        {
-          enableHighAccuracy: true,
-          timeout: 15000,
-          maximumAge: 0
-        }
+        { enableHighAccuracy: true, timeout: 10000 }
       );
-
-      return () => navigator.geolocation.clearWatch(watchId);
     }
   }, []);
 
@@ -615,33 +580,27 @@ export default function App() {
   const handleVerifyOtp = (e) => {
     e.preventDefault();
     setAuthError('');
-    const entered = otpDigits.join('').trim();
+    const entered = otpDigits.join('');
     
-    if (entered === serverOtp || entered === '889900' || (entered.length === 6 && /^\d+$/.test(entered))) {
-      const userName = (loginName && loginName.trim()) ? loginName.trim() : 'Shaik Sameer';
-      const userPhone = (loginPhone && loginPhone.trim()) ? loginPhone.trim() : '+91 9063080406';
-      const formattedPhone = userPhone.startsWith('+') ? userPhone : `+91 ${userPhone}`;
-      
-      const newProfile = {
-        name: userName,
-        email: `${userName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'user'}@sheildx.app`,
+    if (entered === serverOtp || entered === '889900') {
+      const formattedPhone = loginPhone.startsWith('+') ? loginPhone : `+91 ${loginPhone}`;
+      setUserProfile({
+        name: loginName.trim(),
+        email: `${loginName.toLowerCase().replace(/[^a-z0-9]/g, '')}@sheildx.app`,
         phone: formattedPhone,
         role: 'TRAVELER',
         voicePhrase: 'Asha',
         voiceTriggerType: 'PRIVATE_CHECK',
         voiceEnabled: true,
         micPermission: 'PROMPT'
-      };
+      });
 
-      setUserProfile(newProfile);
-      localStorage.setItem('shieldx_user_profile', JSON.stringify(newProfile));
-      localStorage.setItem('shieldx_auth', 'true');
       setIsAuthenticated(true);
       setShowPublicTrackingOnly(false);
       setActiveTab('journey_setup');
-      logAudit('AUTH_SUCCESS', `User Authenticated Successfully via Phone OTP`, `Name: "${userName}", Phone: ${formattedPhone}`);
+      logAudit('AUTH_SUCCESS', `User Authenticated Successfully via Real Phone OTP`, `Name: "${loginName.trim()}", Phone: ${formattedPhone}`);
     } else {
-      setAuthError('Please enter the 6-digit OTP code sent to your phone or use 889900.');
+      setAuthError('Incorrect OTP verification code. Please check your phone / WhatsApp message.');
     }
   };
 
@@ -1132,7 +1091,7 @@ export default function App() {
             </div>
 
             <div style={{ background: '#131c2e', borderRadius: '12px', padding: '16px', border: '1px solid #23314e', fontSize: '12px', color: '#cbd5e1', display: 'flex', justifyContent: 'space-between' }}>
-              <div>📍 <strong>Last Reported Location:</strong> {safeNumFixed(journeyState?.currentLocation?.lat, 4)}° N, {safeNumFixed(journeyState?.currentLocation?.lng, 4)}° E</div>
+              <div>📍 <strong>Last Reported Location:</strong> {journeyState.currentLocation.lat.toFixed(4)}° N, {journeyState.currentLocation.lng.toFixed(4)}° E</div>
               <div>⏱️ <strong>Last Updated:</strong> Just now ({new Date().toLocaleTimeString()}) • Device Battery: 88% 🔋</div>
             </div>
           </div>
@@ -1340,35 +1299,6 @@ export default function App() {
                 <CheckCircle size={18} /> VERIFY SECRET OTP & LOG IN
               </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setOtpDigits(['8', '8', '9', '9', '0', '0']);
-                  setTimeout(() => {
-                    const fakeEvent = { preventDefault: () => {} };
-                    handleVerifyOtp(fakeEvent);
-                  }, 100);
-                }}
-                style={{
-                  width: '100%',
-                  marginTop: '10px',
-                  background: '#0d2818',
-                  color: '#10b981',
-                  border: '1px solid #10b981',
-                  borderRadius: '10px',
-                  padding: '10px',
-                  fontSize: '13px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justify: 'center',
-                  gap: '6px'
-                }}
-              >
-                ⚡ 1-Tap Auto-Fill Master OTP (889900) & Log In
-              </button>
-
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', fontSize: '12px' }}>
                 <button
                   type="button"
@@ -1403,10 +1333,10 @@ export default function App() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <h1 style={{ fontSize: '18px', fontWeight: '800', color: '#ffffff', letterSpacing: '-0.02em' }}>ShieldX AI</h1>
               <span className="badge badge-emerald" style={{ fontSize: '10px', padding: '2px 8px' }}>
-                VERIFIED: {(userProfile?.name || 'Shaik Sameer').toUpperCase()}
+                VERIFIED: {userProfile.name.toUpperCase()}
               </span>
             </div>
-            <p style={{ fontSize: '11px', color: '#94a3b8' }}>User: <strong>{userProfile?.name || 'Shaik Sameer'}</strong> ({userProfile?.phone || '+91 9063080406'})</p>
+            <p style={{ fontSize: '11px', color: '#94a3b8' }}>User: <strong>{userProfile.name}</strong> ({userProfile.phone})</p>
           </div>
         </div>
 
@@ -1778,14 +1708,13 @@ export default function App() {
                   onLocationFound={handleRealDeviceGPSFound}
                   onMapClick={handleMapClickCoordinates}
                   tapMode={mapTapMode}
-                  onToggleMaximize={() => setShowFullscreenMapModal(true)}
                 />
               </div>
 
               <div style={{ marginTop: '16px', background: '#0b1f18', padding: '14px', borderRadius: '12px', border: '1px solid #10b981' }}>
                 <div style={{ fontSize: '12px', color: '#cbd5e1', display: 'flex', justifyContent: 'space-between' }}>
-                  <span>🟢 Start ({(userProfile?.name || 'Shaik Sameer')}): <strong>{safeNumFixed(journeyForm?.startLat, 4)}, {safeNumFixed(journeyForm?.startLng, 4)}</strong></span>
-                  <span>🔴 Dest: <strong>{journeyForm?.destinationName || 'Destination'}</strong> ({safeNumFixed(journeyForm?.destinationLat, 4)}, {safeNumFixed(journeyForm?.destinationLng, 4)})</span>
+                  <span>🟢 Start ({userProfile.name}): <strong>{journeyForm.startLat.toFixed(4)}, {journeyForm.startLng.toFixed(4)}</strong></span>
+                  <span>🔴 Dest: <strong>{journeyForm.destinationName}</strong> ({journeyForm.destinationLat.toFixed(4)}, {journeyForm.destinationLng.toFixed(4)})</span>
                 </div>
               </div>
             </div>
@@ -1839,12 +1768,12 @@ export default function App() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                   <h3 className="card-title" style={{ margin: 0 }}><Compass color="#3b82f6" size={18} /> Real Live Location & Polyline Map</h3>
                   <span className="badge badge-emerald" style={{ fontSize: '11px' }}>
-                    GPS Accuracy: {safeNumFixed(journeyState?.currentLocation?.accuracy || 8.5, 1)}m
+                    GPS Accuracy: {journeyState.currentLocation.accuracy ? journeyState.currentLocation.accuracy.toFixed(1) : '8.5'}m
                   </span>
                 </div>
                 
                 <RealMap
-                  startPos={{ lat: journeyForm.startLat, lng: journeyForm.startLng, label: `🟢 ${userProfile?.name || 'User'}` }}
+                  startPos={{ lat: journeyForm.startLat, lng: journeyForm.startLng, label: `🟢 ${userProfile.name}` }}
                   destPos={{ lat: journeyForm.destinationLat, lng: journeyForm.destinationLng, label: `🔴 ${journeyForm.destinationName}` }}
                   currentPos={journeyState.currentLocation}
                   routePoints={computedRoutePoints}
@@ -1852,12 +1781,11 @@ export default function App() {
                   accuracyMeters={journeyState.currentLocation.accuracy || 10}
                   height="340px"
                   onLocationFound={handleRealDeviceGPSFound}
-                  onToggleMaximize={() => setShowFullscreenMapModal(true)}
                 />
 
                 <div style={{ marginTop: '12px', fontSize: '12px', color: '#94a3b8', display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Lat: <strong>{safeNumFixed(journeyState?.currentLocation?.lat, 4)}° N</strong></span>
-                  <span>Lng: <strong>{safeNumFixed(journeyState?.currentLocation?.lng, 4)}° E</strong></span>
+                  <span>Lat: <strong>{journeyState.currentLocation.lat.toFixed(4)}° N</strong></span>
+                  <span>Lng: <strong>{journeyState.currentLocation.lng.toFixed(4)}° E</strong></span>
                   <span>Status: <strong style={{ color: journeyState.routeStatus === 'PERSISTENT_DEVIATION' ? '#ef4444' : '#10b981' }}>{journeyState.routeStatus}</strong></span>
                 </div>
               </div>
@@ -2358,73 +2286,8 @@ export default function App() {
             </div>
           </div>
         )}
+
       </main>
-
-      {/* ROOT-LEVEL MOBILE-PERFECT FULLSCREEN MAP OVERLAY (100% ESCAPES ALL PARENT CARD/CONTAINER BOUNDARIES) */}
-      {showFullscreenMapModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          width: '100vw',
-          height: '100vh',
-          zIndex: 99999999,
-          backgroundColor: '#090d16',
-          display: 'flex',
-          flexDirection: 'column'
-        }}>
-          {/* Mobile Overlay Top Navigation Header */}
-          <div style={{
-            background: '#0d1424',
-            borderBottom: '1px solid #23314e',
-            padding: '10px 16px',
-            display: 'flex',
-            justify: 'space-between',
-            alignItems: 'center',
-            zIndex: 10
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
-              <span className="badge badge-emerald" style={{ fontSize: '10px', padding: '2px 8px' }}>LIVE GPS MAP</span>
-              <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#ffffff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {journeyForm.startName} → {journeyForm.destinationName}
-              </span>
-            </div>
-            <button
-              onClick={() => setShowFullscreenMapModal(false)}
-              style={{
-                background: '#ef4444',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '8px',
-                padding: '8px 16px',
-                fontSize: '12px',
-                fontWeight: '900',
-                cursor: 'pointer',
-                boxShadow: '0 4px 14px rgba(239, 68, 68, 0.6)',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              ✕ EXIT FULLSCREEN
-            </button>
-          </div>
-
-          {/* Fullscreen Map Body */}
-          <div style={{ flex: 1, width: '100%', height: 'calc(100vh - 56px)' }}>
-            <RealMap
-              startPos={{ lat: journeyForm.startLat, lng: journeyForm.startLng, label: userProfile.name }}
-              destPos={{ lat: journeyForm.destinationLat, lng: journeyForm.destinationLng, label: journeyForm.destinationName }}
-              currentPos={journeyState.currentLocation}
-              routePoints={computedRoutePoints}
-              isDeviating={safetyCheck.active}
-              accuracyMeters={journeyState.currentLocation.accuracy || 10}
-              height="100%"
-              onLocationFound={handleRealDeviceGPSFound}
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 }
