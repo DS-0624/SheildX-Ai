@@ -132,14 +132,19 @@ export default function App() {
   const [geocodingResults, setGeocodingResults] = useState([]);
   const [isSearchingGeocode, setIsSearchingGeocode] = useState(false);
 
-  // Compute dynamic route polyline points
-  const computedRoutePoints = [
+  // --- REAL TURN-BY-TURN ROAD ROUTING ENGINE (OSRM / OPENSTREETMAP) ---
+  const [realRoadPolyline, setRealRoadPolyline] = useState([]);
+
+  // Fallback route points while fetching
+  const fallbackRoutePoints = [
     { lat: journeyForm.startLat, lng: journeyForm.startLng },
     { lat: (journeyForm.startLat * 0.75 + journeyForm.destinationLat * 0.25), lng: (journeyForm.startLng * 0.75 + journeyForm.destinationLng * 0.25) },
     { lat: (journeyForm.startLat * 0.5 + journeyForm.destinationLat * 0.5) + 0.003, lng: (journeyForm.startLng * 0.5 + journeyForm.destinationLng * 0.5) - 0.003 },
     { lat: (journeyForm.startLat * 0.25 + journeyForm.destinationLat * 0.75), lng: (journeyForm.startLng * 0.25 + journeyForm.destinationLng * 0.75) },
     { lat: journeyForm.destinationLat, lng: journeyForm.destinationLng }
   ];
+
+  const computedRoutePoints = realRoadPolyline.length > 0 ? realRoadPolyline : fallbackRoutePoints;
 
   // --- Active Journey State ---
   const [journeyState, setJourneyState] = useState({
@@ -435,6 +440,38 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('shieldx_emergency_contacts', JSON.stringify(emergencyContacts));
   }, [emergencyContacts]);
+
+  // FETCH REAL ROAD DRIVING ROUTE (Uber / Rapido / Google Maps turn-by-turn road paths)
+  useEffect(() => {
+    let isMounted = true;
+    const fetchRealRoadRoute = async () => {
+      const { startLat, startLng, destinationLat, destinationLng } = journeyForm;
+      if (!startLat || !startLng || !destinationLat || !destinationLng) return;
+      try {
+        const url = `https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${destinationLng},${destinationLat}?overview=full&geometries=geojson`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (isMounted && data.code === 'Ok' && data.routes && data.routes.length > 0) {
+          const route = data.routes[0];
+          const coords = route.geometry.coordinates.map(c => ({ lat: c[1], lng: c[0] }));
+          setRealRoadPolyline(coords);
+          
+          const distKm = Number((route.distance / 1000).toFixed(1));
+          const etaMin = Math.max(1, Math.round(route.duration / 60));
+          setJourneyState(prev => ({
+            ...prev,
+            distanceKmRemaining: distKm,
+            etaMinutesRemaining: etaMin
+          }));
+        }
+      } catch (err) {
+        console.warn('OSRM routing fetch error:', err);
+      }
+    };
+
+    fetchRealRoadRoute();
+    return () => { isMounted = false; };
+  }, [journeyForm.startLat, journeyForm.startLng, journeyForm.destinationLat, journeyForm.destinationLng]);
 
   // Debounced auto-search for worldwide geocoding
   useEffect(() => {

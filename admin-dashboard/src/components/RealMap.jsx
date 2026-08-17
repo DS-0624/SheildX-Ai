@@ -138,16 +138,30 @@ export default function RealMap({
       circleRef.current = accuracyCircle;
     }
 
-    // Draw Main Route Polyline
+    // Draw Main Real Road Route Polyline (Uber / Rapido / Google Maps style)
     if (routePoints && routePoints.length > 1) {
       const latLngs = routePoints.map(p => [p.lat, p.lng]);
-      const polyline = L.polyline(latLngs, {
-        color: '#3b82f6',
-        weight: 5,
-        opacity: 0.85,
-        dashArray: '8, 6'
+      
+      // Outer glow line (Uber/Google Maps navigation style)
+      const polylineGlow = L.polyline(latLngs, {
+        color: '#0284c7',
+        weight: 9,
+        opacity: 0.35,
+        lineCap: 'round',
+        lineJoin: 'round'
       }).addTo(map);
+
+      // Inner crisp solid road line
+      const polyline = L.polyline(latLngs, {
+        color: '#38bdf8',
+        weight: 5,
+        opacity: 1.0,
+        lineCap: 'round',
+        lineJoin: 'round'
+      }).addTo(map);
+
       polylineRef.current = polyline;
+      markersRef.current.push(polylineGlow);
 
       // Draw deviation indicator line if deviating
       if (isDeviating && currentPos && routePoints.length > 0) {
