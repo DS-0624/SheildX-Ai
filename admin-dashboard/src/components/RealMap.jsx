@@ -21,7 +21,8 @@ export default function RealMap({
   interactive = true,
   onLocationFound = null,
   onMapClick = null,
-  tapMode = null // 'START' | 'DESTINATION' | null
+  tapMode = null, // 'START' | 'DESTINATION' | null
+  onToggleMaximize = null
 }) {
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -329,7 +330,13 @@ export default function RealMap({
       }}>
         {/* Fullscreen Maximize / Exit Button */}
         <button
-          onClick={() => setIsFullscreen(!isFullscreen)}
+          onClick={() => {
+            if (onToggleMaximize) {
+              onToggleMaximize();
+            } else {
+              setIsFullscreen(!isFullscreen);
+            }
+          }}
           title={isFullscreen ? 'Exit Fullscreen Map View (or press ESC key)' : 'Maximize Map View (View Entire Route)'}
           style={{
             pointerEvents: 'auto',

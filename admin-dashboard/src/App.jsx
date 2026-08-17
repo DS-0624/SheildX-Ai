@@ -125,6 +125,7 @@ export default function App() {
   });
 
   const [mapTapMode, setMapTapMode] = useState(null);
+  const [showFullscreenMapModal, setShowFullscreenMapModal] = useState(false);
 
   // --- Real Geocoding Search State ---
   const [searchQuery, setSearchQuery] = useState('');
@@ -1708,6 +1709,7 @@ export default function App() {
                   onLocationFound={handleRealDeviceGPSFound}
                   onMapClick={handleMapClickCoordinates}
                   tapMode={mapTapMode}
+                  onToggleMaximize={() => setShowFullscreenMapModal(true)}
                 />
               </div>
 
@@ -1781,6 +1783,7 @@ export default function App() {
                   accuracyMeters={journeyState.currentLocation.accuracy || 10}
                   height="340px"
                   onLocationFound={handleRealDeviceGPSFound}
+                  onToggleMaximize={() => setShowFullscreenMapModal(true)}
                 />
 
                 <div style={{ marginTop: '12px', fontSize: '12px', color: '#94a3b8', display: 'flex', justifyContent: 'space-between' }}>
@@ -2286,8 +2289,73 @@ export default function App() {
             </div>
           </div>
         )}
-
       </main>
+
+      {/* ROOT-LEVEL MOBILE-PERFECT FULLSCREEN MAP OVERLAY (100% ESCAPES ALL PARENT CARD/CONTAINER BOUNDARIES) */}
+      {showFullscreenMapModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          width: '100vw',
+          height: '100vh',
+          zIndex: 99999999,
+          backgroundColor: '#090d16',
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          {/* Mobile Overlay Top Navigation Header */}
+          <div style={{
+            background: '#0d1424',
+            borderBottom: '1px solid #23314e',
+            padding: '10px 16px',
+            display: 'flex',
+            justify: 'space-between',
+            alignItems: 'center',
+            zIndex: 10
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+              <span className="badge badge-emerald" style={{ fontSize: '10px', padding: '2px 8px' }}>LIVE GPS MAP</span>
+              <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#ffffff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {journeyForm.startName} → {journeyForm.destinationName}
+              </span>
+            </div>
+            <button
+              onClick={() => setShowFullscreenMapModal(false)}
+              style={{
+                background: '#ef4444',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '8px 16px',
+                fontSize: '12px',
+                fontWeight: '900',
+                cursor: 'pointer',
+                boxShadow: '0 4px 14px rgba(239, 68, 68, 0.6)',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              ✕ EXIT FULLSCREEN
+            </button>
+          </div>
+
+          {/* Fullscreen Map Body */}
+          <div style={{ flex: 1, width: '100%', height: 'calc(100vh - 56px)' }}>
+            <RealMap
+              startPos={{ lat: journeyForm.startLat, lng: journeyForm.startLng, label: userProfile.name }}
+              destPos={{ lat: journeyForm.destinationLat, lng: journeyForm.destinationLng, label: journeyForm.destinationName }}
+              currentPos={journeyState.currentLocation}
+              routePoints={computedRoutePoints}
+              isDeviating={safetyCheck.active}
+              accuracyMeters={journeyState.currentLocation.accuracy || 10}
+              height="100%"
+              onLocationFound={handleRealDeviceGPSFound}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
