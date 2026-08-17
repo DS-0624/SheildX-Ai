@@ -6,7 +6,11 @@ import {
   MessageCircle, Plus, Trash2, Edit3, Save, Share2, Search, Target, Loader2, Volume2, Key,
   LogOut, ArrowRight, Smartphone, ShieldAlert, Check, Copy, ExternalLink as LinkIcon, Eye as ViewIcon
 } from 'lucide-react';
-import RealMap from './components/RealMap';
+const safeNumFixed = (val, decimals = 4) => {
+  if (val === null || val === undefined) return (0).toFixed(decimals);
+  const num = Number(val);
+  return isNaN(num) ? (0).toFixed(decimals) : num.toFixed(decimals);
+};
 
 export default function App() {
   // --- AUTHENTICATION & LOGIN STATE (PERSISTED IN LOCALSTORAGE) ---
@@ -1121,7 +1125,7 @@ export default function App() {
             </div>
 
             <div style={{ background: '#131c2e', borderRadius: '12px', padding: '16px', border: '1px solid #23314e', fontSize: '12px', color: '#cbd5e1', display: 'flex', justifyContent: 'space-between' }}>
-              <div>📍 <strong>Last Reported Location:</strong> {journeyState.currentLocation.lat.toFixed(4)}° N, {journeyState.currentLocation.lng.toFixed(4)}° E</div>
+              <div>📍 <strong>Last Reported Location:</strong> {safeNumFixed(journeyState?.currentLocation?.lat, 4)}° N, {safeNumFixed(journeyState?.currentLocation?.lng, 4)}° E</div>
               <div>⏱️ <strong>Last Updated:</strong> Just now ({new Date().toLocaleTimeString()}) • Device Battery: 88% 🔋</div>
             </div>
           </div>
@@ -1773,8 +1777,8 @@ export default function App() {
 
               <div style={{ marginTop: '16px', background: '#0b1f18', padding: '14px', borderRadius: '12px', border: '1px solid #10b981' }}>
                 <div style={{ fontSize: '12px', color: '#cbd5e1', display: 'flex', justifyContent: 'space-between' }}>
-                  <span>🟢 Start ({userProfile.name}): <strong>{journeyForm.startLat.toFixed(4)}, {journeyForm.startLng.toFixed(4)}</strong></span>
-                  <span>🔴 Dest: <strong>{journeyForm.destinationName}</strong> ({journeyForm.destinationLat.toFixed(4)}, {journeyForm.destinationLng.toFixed(4)})</span>
+                  <span>🟢 Start ({(userProfile?.name || 'Shaik Sameer')}): <strong>{safeNumFixed(journeyForm?.startLat, 4)}, {safeNumFixed(journeyForm?.startLng, 4)}</strong></span>
+                  <span>🔴 Dest: <strong>{journeyForm?.destinationName || 'Destination'}</strong> ({safeNumFixed(journeyForm?.destinationLat, 4)}, {safeNumFixed(journeyForm?.destinationLng, 4)})</span>
                 </div>
               </div>
             </div>
@@ -1828,12 +1832,12 @@ export default function App() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                   <h3 className="card-title" style={{ margin: 0 }}><Compass color="#3b82f6" size={18} /> Real Live Location & Polyline Map</h3>
                   <span className="badge badge-emerald" style={{ fontSize: '11px' }}>
-                    GPS Accuracy: {journeyState.currentLocation.accuracy ? journeyState.currentLocation.accuracy.toFixed(1) : '8.5'}m
+                    GPS Accuracy: {safeNumFixed(journeyState?.currentLocation?.accuracy || 8.5, 1)}m
                   </span>
                 </div>
                 
                 <RealMap
-                  startPos={{ lat: journeyForm.startLat, lng: journeyForm.startLng, label: `🟢 ${userProfile.name}` }}
+                  startPos={{ lat: journeyForm.startLat, lng: journeyForm.startLng, label: `🟢 ${userProfile?.name || 'User'}` }}
                   destPos={{ lat: journeyForm.destinationLat, lng: journeyForm.destinationLng, label: `🔴 ${journeyForm.destinationName}` }}
                   currentPos={journeyState.currentLocation}
                   routePoints={computedRoutePoints}
@@ -1845,8 +1849,8 @@ export default function App() {
                 />
 
                 <div style={{ marginTop: '12px', fontSize: '12px', color: '#94a3b8', display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Lat: <strong>{journeyState.currentLocation.lat.toFixed(4)}° N</strong></span>
-                  <span>Lng: <strong>{journeyState.currentLocation.lng.toFixed(4)}° E</strong></span>
+                  <span>Lat: <strong>{safeNumFixed(journeyState?.currentLocation?.lat, 4)}° N</strong></span>
+                  <span>Lng: <strong>{safeNumFixed(journeyState?.currentLocation?.lng, 4)}° E</strong></span>
                   <span>Status: <strong style={{ color: journeyState.routeStatus === 'PERSISTENT_DEVIATION' ? '#ef4444' : '#10b981' }}>{journeyState.routeStatus}</strong></span>
                 </div>
               </div>
