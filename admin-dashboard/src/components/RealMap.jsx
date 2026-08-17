@@ -225,6 +225,22 @@ export default function RealMap({
 
   }, [startPos, destPos, currentPos, routePoints, isDeviating, accuracyMeters, interactive, mapStyle]);
 
+  // Toggle body class when isFullscreen changes to hide scrollbars and background overflow
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      if (isFullscreen) {
+        document.body.classList.add('map-fullscreen-active');
+      } else {
+        document.body.classList.remove('map-fullscreen-active');
+      }
+    }
+    return () => {
+      if (typeof document !== 'undefined') {
+        document.body.classList.remove('map-fullscreen-active');
+      }
+    };
+  }, [isFullscreen]);
+
   // Handle Fullscreen & Height Invalidate Size
   useEffect(() => {
     if (mapInstanceRef.current) {
@@ -301,7 +317,7 @@ export default function RealMap({
         bottom: 0,
         width: '100vw',
         height: '100vh',
-        zIndex: 99000000,
+        zIndex: 99999999,
         backgroundColor: '#090d16',
         borderRadius: 0,
         isolation: 'isolate'
@@ -327,7 +343,7 @@ export default function RealMap({
         top: '12px',
         left: '12px',
         right: '12px',
-        zIndex: 10000000,
+        zIndex: 999999999,
         display: 'flex',
         justify: 'space-between',
         alignItems: 'center',
@@ -336,13 +352,7 @@ export default function RealMap({
       }}>
         {/* Fullscreen Maximize / Minimize Exit Button */}
         <button
-          onClick={() => {
-            if (onToggleMaximize) {
-              onToggleMaximize();
-            } else {
-              setIsFullscreen(!isFullscreen);
-            }
-          }}
+          onClick={() => setIsFullscreen(!isFullscreen)}
           title={isFullscreen ? 'Minimize / Exit Fullscreen Map View (or press ESC key)' : 'Maximize Map View (View Entire Route)'}
           style={{
             pointerEvents: 'auto',

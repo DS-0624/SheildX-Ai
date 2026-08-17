@@ -370,3 +370,12 @@ td {
     height: 240px;
   }
 }
+
+/* Fullscreen Map Hide Background Elements Rules */
+body.map-fullscreen-active {
+  overflow: hidden !important;
+}
+
+body.map-fullscreen-active .app-header {
+  display: none !important;
+}
