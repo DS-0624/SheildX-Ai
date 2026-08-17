@@ -1,8 +1,14 @@
 package ai.sheildx.user
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
+import android.os.Build
 import android.os.Bundle
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.core.app.NotificationCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -20,17 +26,75 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
+    private var triggerEmergencyCallback: (() -> Unit)? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        createNotificationChannel()
+
         setContent {
             SheildXUserAppTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = Color(0xFF0F172A)
                 ) {
-                    MainAppNavigation()
+                    MainAppNavigation(
+                        onRegisterWatchTrigger = { callback ->
+                            triggerEmergencyCallback = callback
+                        },
+                        onSendWatchVibrationNotification = { title, message ->
+                            sendFireBolttNotification(title, message)
+                        }
+                    )
                 }
             }
+        }
+    }
+
+    // Fire-Boltt 080 Bluetooth Hardware Button Listener (Camera Shutter / Music Play-Pause)
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE ||
+            keyCode == KeyEvent.KEYCODE_MEDIA_NEXT ||
+            keyCode == KeyEvent.KEYCODE_CAMERA ||
+            keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+            
+            triggerEmergencyCallback?.invoke()
+            sendFireBolttNotification("🚨 EMERGENCY SOS TRIGGERED", "ShieldX alert sent from Fire-Boltt watch!")
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                "shieldx_fireboltt_channel",
+                "ShieldX Safety Alerts",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Sends emergency alerts to Fire-Boltt smartwatch via Bluetooth"
+                enableVibration(true)
+                vibrationPattern = longArrayOf(0, 500, 200, 500)
+            }
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
+        }
+    }
+
+    private fun sendFireBolttNotification(title: String, message: String) {
+        try {
+            val builder = NotificationCompat.Builder(this, "shieldx_fireboltt_channel")
+                .setSmallIcon(android.R.drawable.ic_dialog_alert)
+                .setContentTitle(title)
+                .setContentText(message)
+                .setPriority(NotificationCompat.PRIORITY_MAX)
+                .setCategory(NotificationCompat.CATEGORY_ALARM)
+                .setAutoCancel(true)
+
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.notify(1001, builder.build())
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 }
@@ -59,13 +123,22 @@ enum class Screen {
 }
 
 @Composable
-fun MainAppNavigation() {
+fun MainAppNavigation(
+    onRegisterWatchTrigger: (() -> Unit) -> Unit,
+    onSendWatchVibrationNotification: (String, String) -> Unit
+) {
     var currentScreen by remember { mutableStateOf(Screen.REGISTER) }
     var userEmail by remember { mutableStateOf("user@sheildx.ai") }
     var emergencyEmails by remember { mutableStateOf(listOf("email1@test.com", "email2@test.com", "email3@test.com", "email4@test.com")) }
     var destinationName by remember { mutableStateOf("Home (Main Road)") }
     var etaMinutes by remember { mutableStateOf(25) }
     var voiceCode by remember { mutableStateOf("Blue Jasmine") }
+
+    LaunchedEffect(Unit) {
+        onRegisterWatchTrigger {
+            currentScreen = Screen.EMERGENCY_ALERT
+        }
+    }
 
     when (currentScreen) {
         Screen.REGISTER -> RegisterScreen(
@@ -90,13 +163,22 @@ fun MainAppNavigation() {
             destinationName = destinationName,
             etaMinutes = etaMinutes,
             voiceCode = voiceCode,
-            onTriggerCheck = { currentScreen = Screen.PRIVATE_CHECK },
-            onTriggerEmergency = { currentScreen = Screen.EMERGENCY_ALERT },
+            onTriggerCheck = {
+                onSendWatchVibrationNotification("🚨 ARE YOU SAFE?", "Route deviation detected. Tap to confirm safety.")
+                currentScreen = Screen.PRIVATE_CHECK
+            },
+            onTriggerEmergency = {
+                onSendWatchVibrationNotification("🚨 EMERGENCY SOS ACTIVE", "Guardians notified via WhatsApp & Email")
+                currentScreen = Screen.EMERGENCY_ALERT
+            },
             onEndJourney = { currentScreen = Screen.JOURNEY_SETUP }
         )
         Screen.PRIVATE_CHECK -> PrivateCheckOverlayScreen(
             onSafe = { currentScreen = Screen.ACTIVE_JOURNEY },
-            onEscalateNo = { currentScreen = Screen.EMERGENCY_ALERT }
+            onEscalateNo = {
+                onSendWatchVibrationNotification("🚨 EMERGENCY ESCALATED", "Live location dispatched to 4 emails & WhatsApp")
+                currentScreen = Screen.EMERGENCY_ALERT
+            }
         )
         Screen.EMERGENCY_ALERT -> EmergencyAlertScreen(
             emergencyEmails = emergencyEmails,
@@ -120,7 +202,6 @@ fun RegisterScreen(onRegisterSuccess: (String, List<String>) -> Unit) {
     var password by remember { mutableStateOf("securePass123") }
     var phone by remember { mutableStateOf("+1 555-0199") }
     
-    // Explicit 4 Emergency Emails Requirement
     var email1 by remember { mutableStateOf("parent1@sheildx.ai") }
     var email2 by remember { mutableStateOf("parent2@sheildx.ai") }
     var email3 by remember { mutableStateOf("guardian3@sheildx.ai") }
@@ -134,7 +215,7 @@ fun RegisterScreen(onRegisterSuccess: (String, List<String>) -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text("SheildX AI", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Color(0xFF60A5FA))
-        Text("SafeCircle Watch — Student & Commuter Safety", fontSize = 14.sp, color = Color.Gray)
+        Text("Fire-Boltt 080 Smartwatch Protection System", fontSize = 14.sp, color = Color.Gray)
         Spacer(modifier = Modifier.height(20.dp))
 
         Card(
@@ -210,7 +291,7 @@ fun JourneySetupScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text("SafeCircle Watch", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text("Fire-Boltt 080 Protection", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 Text("User: $userEmail", fontSize = 12.sp, color = Color.Gray)
             }
             IconButton(onClick = onOpenSettings) {
@@ -251,9 +332,11 @@ fun JourneySetupScreen(
                 Divider(color = Color(0xFF334155))
                 Spacer(modifier = Modifier.height(12.dp))
 
+                Text("Fire-Boltt Watch Trigger:", fontSize = 13.sp, color = Color.Gray)
+                Text("⌚ Press Camera Shutter or Double Play on Watch", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF10B981))
+                Spacer(modifier = Modifier.height(6.dp))
                 Text("Emergency Voice Code Active:", fontSize = 13.sp, color = Color.Gray)
                 Text("🗣️ \"$voiceCode\"", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFFF59E0B))
-                Text("Say phrase anytime to trigger immediate emergency alert", fontSize = 11.sp, color = Color.Gray)
             }
         }
 
@@ -308,7 +391,7 @@ fun ActiveJourneyScreen(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("JOURNEY ACTIVE", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF10B981))
             }
-            Text("Watch: Connected ⌚", fontSize = 12.sp, color = Color(0xFF60A5FA))
+            Text("Fire-Boltt 080: Synced ⌚", fontSize = 12.sp, color = Color(0xFF60A5FA))
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -333,8 +416,8 @@ fun ActiveJourneyScreen(
                         Text("NORMAL (On Path)", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF10B981))
                     }
                     Column {
-                        Text("Watch Battery", fontSize = 12.sp, color = Color.Gray)
-                        Text("92%", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text("Watch Sync", fontSize = 12.sp, color = Color.Gray)
+                        Text("Active ⚡", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF10B981))
                     }
                 }
             }
@@ -347,8 +430,8 @@ fun ActiveJourneyScreen(
             colors = CardDefaults.cardColors(containerColor = Color(0xFF334155))
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Active Voice Code Listener:", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFFF59E0B))
-                Text("Listening on-device for emergency phrase: \"$voiceCode\"", fontSize = 13.sp, color = Color.White)
+                Text("Fire-Boltt 080 Hardware Listener:", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF10B981))
+                Text("⌚ Press Camera Shutter or Double Play on Watch to trigger SOS", fontSize = 13.sp, color = Color.White)
             }
         }
 
@@ -361,7 +444,7 @@ fun ActiveJourneyScreen(
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFF59E0B))
         ) {
-            Text("Simulate Route Deviation (Private Check #1)")
+            Text("Simulate Route Deviation (Check Fire-Boltt Watch Vibration)")
         }
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -371,7 +454,7 @@ fun ActiveJourneyScreen(
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444))
         ) {
-            Text("Simulate Emergency Voice Code Trigger (\"$voiceCode\")")
+            Text("Simulate Emergency SOS Trigger")
         }
 
         Spacer(modifier = Modifier.weight(1f))
@@ -395,7 +478,6 @@ fun PrivateCheckOverlayScreen(onSafe: () -> Unit, onEscalateNo: () -> Unit) {
             delay(1000)
             timerSeconds--
         } else {
-            // Auto-escalate on 30s timeout
             onEscalateNo()
         }
     }
@@ -412,7 +494,7 @@ fun PrivateCheckOverlayScreen(onSafe: () -> Unit, onEscalateNo: () -> Unit) {
                 modifier = Modifier.padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("⌚ Watch Vibrating...", fontSize = 14.sp, color = Color(0xFFF59E0B))
+                Text("⌚ Fire-Boltt 080 Watch Vibrating...", fontSize = 14.sp, color = Color(0xFFF59E0B))
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text("ARE YOU SAFE?", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
@@ -454,7 +536,7 @@ fun EmergencyAlertScreen(emergencyEmails: List<String>, onResolve: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text("🚨 EMERGENCY ACTIVE", fontSize = 26.sp, fontWeight = FontWeight.Bold, color = Color.White)
-        Text("SafeCircle Watch Protection System Engaged", fontSize = 13.sp, color = Color(0xFFFECACA))
+        Text("Fire-Boltt 080 Protection Engaged", fontSize = 13.sp, color = Color(0xFFFECACA))
 
         Spacer(modifier = Modifier.height(20.dp))
 
