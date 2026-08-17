@@ -81,12 +81,12 @@ export default function App() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0 && !parsed[0].id.includes('c_default')) {
+          return parsed;
+        }
       } catch (e) {}
     }
-    return [
-      { id: 'c_default_1', name: 'Shaik Sameer (Emergency Contact)', email: 'sameer@sheildx.app', phone: '+91 90630 80406', relationship: 'Family', isVerified: true, sendWhatsapp: true }
-    ];
+    return [];
   });
 
   const [contactForm, setContactForm] = useState({ name: '', email: '', phone: '', relationship: 'Family' });
