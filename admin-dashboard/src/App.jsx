@@ -41,22 +41,31 @@ export default function App() {
   const checkIntervalSeconds = presentationSpeed ? 3 : 30;
   const [autoOpenWhatsapp, setAutoOpenWhatsapp] = useState(true);
 
-  // --- Dynamic Authenticated User Profile (PERSISTED) ---
+  const defaultProfile = {
+    name: 'Shaik Sameer',
+    email: 'sameer@sheildx.app',
+    phone: '+91 90630 80406',
+    role: 'TRAVELER',
+    voicePhrase: 'sameer',
+    voiceTriggerType: 'PRIVATE_CHECK',
+    voiceEnabled: true,
+    micPermission: 'PROMPT'
+  };
+
+  // --- Dynamic Authenticated User Profile (PERSISTED WITH SAFE FALLBACKS) ---
   const [userProfile, setUserProfile] = useState(() => {
-    const saved = localStorage.getItem('shieldx_user_profile');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) {}
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('shieldx_user_profile');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed && typeof parsed === 'object' && parsed.name) {
+            return { ...defaultProfile, ...parsed };
+          }
+        } catch (e) {}
+      }
     }
-    return {
-      name: 'Shaik Sameer',
-      email: 'sameer@sheildx.app',
-      phone: '+91 90630 80406',
-      role: 'TRAVELER',
-      voicePhrase: 'sam',
-      voiceTriggerType: 'IMMEDIATE_SOS',
-      voiceEnabled: true,
-      micPermission: 'PROMPT'
-    };
+    return defaultProfile;
   });
 
   const userProfileRef = useRef(userProfile);
@@ -1383,10 +1392,10 @@ export default function App() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <h1 style={{ fontSize: '18px', fontWeight: '800', color: '#ffffff', letterSpacing: '-0.02em' }}>ShieldX AI</h1>
               <span className="badge badge-emerald" style={{ fontSize: '10px', padding: '2px 8px' }}>
-                VERIFIED: {userProfile.name.toUpperCase()}
+                VERIFIED: {(userProfile?.name || 'Shaik Sameer').toUpperCase()}
               </span>
             </div>
-            <p style={{ fontSize: '11px', color: '#94a3b8' }}>User: <strong>{userProfile.name}</strong> ({userProfile.phone})</p>
+            <p style={{ fontSize: '11px', color: '#94a3b8' }}>User: <strong>{userProfile?.name || 'Shaik Sameer'}</strong> ({userProfile?.phone || '+91 9063080406'})</p>
           </div>
         </div>
 
