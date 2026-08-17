@@ -721,14 +721,6 @@ export default function App() {
 
     setContactForm({ name: '', email: '', phone: '', relationship: 'Family' });
     setEditingContactId(null);
-
-    // Auto-dispatch test message link to WhatsApp if autoOpenWhatsapp is ON
-    if (autoOpenWhatsapp && savedContact.phone) {
-      const waLink = getWhatsAppLinkForContact(savedContact);
-      setTimeout(() => {
-        window.open(waLink, '_blank');
-      }, 500);
-    }
   };
 
   const handleDeleteContact = (id) => {
@@ -1605,7 +1597,7 @@ export default function App() {
 
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button className="btn-success" onClick={handleSaveContact} style={{ padding: '12px' }}>
-                  {editingContactId ? 'Update Contact' : 'Save & Enable Auto WhatsApp Message'}
+                  {editingContactId ? 'Update Contact' : 'Save Emergency Contact'}
                 </button>
                 {editingContactId && (
                   <button className="btn-primary" onClick={() => { setEditingContactId(null); setContactForm({ name: '', email: '', phone: '', relationship: 'Family' }); }} style={{ background: '#334155', width: 'auto' }}>
