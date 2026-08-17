@@ -672,30 +672,30 @@ export default function App() {
         
         // Read live profile state via Ref to avoid React state closure staleness
         const activeProfile = userProfileRef.current || userProfile;
-        const targetPhrase = (activeProfile.voicePhrase || 'sam').toLowerCase().trim();
+        const targetPhrase = (activeProfile.voicePhrase || 'sameer').toLowerCase().trim();
 
-        // 1. Check for Emergency Panic Keywords (sam, emergency, help, danger, sos, save me, or target phrase)
-        const isCustomPanicMatch = targetPhrase.length > 0 && cleanTranscript.includes(targetPhrase);
+        // 1. Secret Code Word / Panic Keywords (sameer, sam, Asha, emergency, help, danger, sos, save me, or custom phrase)
+        const isSecretCodeWordMatch = targetPhrase.length > 0 && cleanTranscript.includes(targetPhrase);
         const isEmergencyWordMatch = cleanTranscript.includes('emergency') || 
                                      cleanTranscript.includes('help') || 
                                      cleanTranscript.includes('danger') || 
                                      cleanTranscript.includes('sos') || 
                                      cleanTranscript.includes('save me');
 
-        // 2. Check for Safety Clearance Keywords (i am safe, i'm safe, all good, clear alert)
+        // 2. Explicit Safety Clearance Phrases ONLY ("i am safe", "i'm safe", "all good", "clear alert")
         const isExplicitSafePhrase = cleanTranscript.includes('i am safe') || 
                                     cleanTranscript.includes("i'm safe") || 
                                     cleanTranscript.includes('all good') || 
                                     cleanTranscript.includes('clear alert');
 
         if (!voiceMatchedAlert) {
-          // If phrase matches custom panic word OR danger word OR voiceTriggerType is IMMEDIATE_SOS
-          if ((isCustomPanicMatch && activeProfile.voiceTriggerType === 'IMMEDIATE_SOS') || isEmergencyWordMatch) {
+          // SECRET CODE WORDS (e.g. "sameer") ALWAYS TRIGGER IMMEDIATE EMERGENCY SOS & WHATSAPP DISPATCH!
+          if (isSecretCodeWordMatch || isEmergencyWordMatch) {
             setVoiceMatchedAlert(true);
-            logAudit('VOICE_ENGINE', `EMERGENCY SOS VOICE MATCHED: "${currentTranscript}"`, `Triggered Emergency SOS & WhatsApp Live Location Dispatch`);
-            triggerEmergencyEscalation('VOICE_SECRET_PANIC', `Emergency Voice Code "${currentTranscript}" spoken by ${activeProfile.name}`);
+            logAudit('VOICE_ENGINE', `SECRET PANIC CODE WORD MATCHED: "${currentTranscript}"`, `Triggered Immediate Emergency SOS & WhatsApp Live Location Dispatch`);
+            triggerEmergencyEscalation('VOICE_SECRET_PANIC', `Secret Emergency Voice Code "${currentTranscript}" spoken by ${activeProfile.name}`);
             setTimeout(() => setVoiceMatchedAlert(false), 4000);
-          } else if (isExplicitSafePhrase || (isCustomPanicMatch && activeProfile.voiceTriggerType === 'PRIVATE_CHECK')) {
+          } else if (isExplicitSafePhrase) {
             setVoiceMatchedAlert(true);
             logAudit('VOICE_ENGINE', `VOICE SAFETY CLEARANCE MATCHED: "${currentTranscript}"`, `User marked CONFIRMED SAFE`);
             handleConfirmSafe();
@@ -1971,8 +1971,8 @@ export default function App() {
                   value={userProfile.voiceTriggerType}
                   onChange={(e) => setUserProfile({ ...userProfile, voiceTriggerType: e.target.value })}
                 >
-                  <option value="PRIVATE_CHECK">Start Private 3-Attempt Check ("Are you safe?")</option>
-                  <option value="IMMEDIATE_SOS">Immediate Emergency SOS & WhatsApp Dispatch</option>
+                  <option value="IMMEDIATE_SOS">🚨 Immediate Emergency SOS & WhatsApp Location Dispatch</option>
+                  <option value="PRIVATE_CHECK">🛡️ Start Private Check ("Are you safe?")</option>
                 </select>
               </div>
 
