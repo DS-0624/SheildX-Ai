@@ -48,16 +48,21 @@ export default function App() {
       try { return JSON.parse(saved); } catch (e) {}
     }
     return {
-      name: 'Ananya Sharma',
-      email: 'ananya@sheildx.app',
-      phone: '+91 98765 43210',
+      name: 'Shaik Sameer',
+      email: 'sameer@sheildx.app',
+      phone: '+91 90630 80406',
       role: 'TRAVELER',
-      voicePhrase: 'Asha',
-      voiceTriggerType: 'PRIVATE_CHECK',
+      voicePhrase: 'sam',
+      voiceTriggerType: 'IMMEDIATE_SOS',
       voiceEnabled: true,
       micPermission: 'PROMPT'
     };
   });
+
+  const userProfileRef = useRef(userProfile);
+  useEffect(() => {
+    userProfileRef.current = userProfile;
+  }, [userProfile]);
 
   // --- REAL WEB SPEECH RECOGNITION & MICROPHONE AUDIO SPECTRUM STATE ---
   const [isListeningVoice, setIsListeningVoice] = useState(false);
@@ -650,45 +655,37 @@ export default function App() {
         
         setLastTranscript(currentTranscript);
         const cleanTranscript = currentTranscript.toLowerCase();
-        const targetPhrase = userProfile.voicePhrase.toLowerCase().trim();
+        
+        // Read live profile state via Ref to avoid React state closure staleness
+        const activeProfile = userProfileRef.current || userProfile;
+        const targetPhrase = (activeProfile.voicePhrase || 'sam').toLowerCase().trim();
 
-        // 1. Exact Custom Secret Phrase Match (User configured e.g. "sam")
-        const isCustomPhraseMatch = targetPhrase.length > 0 && cleanTranscript.includes(targetPhrase);
+        // 1. Check for Emergency Panic Keywords (sam, emergency, help, danger, sos, save me, or target phrase)
+        const isCustomPanicMatch = targetPhrase.length > 0 && cleanTranscript.includes(targetPhrase);
+        const isEmergencyWordMatch = cleanTranscript.includes('emergency') || 
+                                     cleanTranscript.includes('help') || 
+                                     cleanTranscript.includes('danger') || 
+                                     cleanTranscript.includes('sos') || 
+                                     cleanTranscript.includes('save me');
 
-        // 2. Explicit Safety Clearance Phrases ("i am safe", "all good", "clear alert")
+        // 2. Check for Safety Clearance Keywords (i am safe, i'm safe, all good, clear alert)
         const isExplicitSafePhrase = cleanTranscript.includes('i am safe') || 
                                     cleanTranscript.includes("i'm safe") || 
                                     cleanTranscript.includes('all good') || 
                                     cleanTranscript.includes('clear alert');
 
-        // 3. Explicit Danger / Panic Phrases ("help", "emergency", "danger", "sos", "save me")
-        const isExplicitDangerPhrase = cleanTranscript.includes('help') || 
-                                      cleanTranscript.includes('emergency') || 
-                                      cleanTranscript.includes('danger') || 
-                                      cleanTranscript.includes('sos') || 
-                                      cleanTranscript.includes('save me');
-
         if (!voiceMatchedAlert) {
-          if (isCustomPhraseMatch) {
+          // If phrase matches custom panic word OR danger word OR voiceTriggerType is IMMEDIATE_SOS
+          if ((isCustomPanicMatch && activeProfile.voiceTriggerType === 'IMMEDIATE_SOS') || isEmergencyWordMatch) {
             setVoiceMatchedAlert(true);
-            if (userProfile.voiceTriggerType === 'IMMEDIATE_SOS') {
-              logAudit('VOICE_ENGINE', `SECRET PANIC PHRASE MATCHED: "${currentTranscript}"`, `Triggered Immediate Emergency SOS & WhatsApp Dispatch`);
-              triggerEmergencyEscalation('VOICE_SECRET_PANIC', `Secret Panic Phrase "${userProfile.voicePhrase}" spoken by ${userProfile.name}`);
-            } else {
-              logAudit('VOICE_ENGINE', `VOICE SAFETY CHECK MATCHED: "${currentTranscript}"`, `Resolved Safety Check`);
-              handleConfirmSafe();
-            }
-            setTimeout(() => setVoiceMatchedAlert(false), 3000);
-          } else if (isExplicitSafePhrase) {
+            logAudit('VOICE_ENGINE', `EMERGENCY SOS VOICE MATCHED: "${currentTranscript}"`, `Triggered Emergency SOS & WhatsApp Live Location Dispatch`);
+            triggerEmergencyEscalation('VOICE_SECRET_PANIC', `Emergency Voice Code "${currentTranscript}" spoken by ${activeProfile.name}`);
+            setTimeout(() => setVoiceMatchedAlert(false), 4000);
+          } else if (isExplicitSafePhrase || (isCustomPanicMatch && activeProfile.voiceTriggerType === 'PRIVATE_CHECK')) {
             setVoiceMatchedAlert(true);
             logAudit('VOICE_ENGINE', `VOICE SAFETY CLEARANCE MATCHED: "${currentTranscript}"`, `User marked CONFIRMED SAFE`);
             handleConfirmSafe();
-            setTimeout(() => setVoiceMatchedAlert(false), 3000);
-          } else if (isExplicitDangerPhrase) {
-            setVoiceMatchedAlert(true);
-            logAudit('VOICE_ENGINE', `VOICE DANGER KEYWORD MATCHED: "${currentTranscript}"`, `Triggered Emergency SOS`);
-            triggerEmergencyEscalation('VOICE_DANGER_KEYWORD', `Danger keyword "${currentTranscript}" spoken by ${userProfile.name}`);
-            setTimeout(() => setVoiceMatchedAlert(false), 3000);
+            setTimeout(() => setVoiceMatchedAlert(false), 4000);
           }
         }
       };
