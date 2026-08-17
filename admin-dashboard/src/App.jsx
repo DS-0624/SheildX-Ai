@@ -129,20 +129,54 @@ export default function App() {
     }
   };
 
-  const sendBrowserNotification = (title, body) => {
+  const sendBrowserNotification = (title, body, isSafetyCheck = false) => {
     if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
       try {
-        new Notification(title, {
+        const options = {
           body,
           icon: "/favicon.svg",
           vibrate: [500, 200, 500, 200, 500],
-          tag: 'shieldx-safety-alert'
-        });
+          tag: 'shieldx-safety-alert',
+          requireInteraction: true
+        };
+
+        if (isSafetyCheck && 'serviceWorker' in navigator) {
+          navigator.serviceWorker.ready.then((registration) => {
+            registration.showNotification(title, {
+              ...options,
+              actions: [
+                { action: 'SAFE', title: '🟢 YES (I am Safe)' },
+                { action: 'SOS', title: '🚨 NO (Send SOS)' }
+              ]
+            });
+          }).catch(() => {
+            new Notification(title, options);
+          });
+        } else {
+          new Notification(title, options);
+        }
       } catch (err) {
         console.warn("Browser notification error:", err);
       }
     }
   };
+
+  // --- LISTEN FOR SERVICE WORKER NOTIFICATION ACTION CLICKS (YES = SAFE, NO = SOS) ---
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      const handleSwMessage = (event) => {
+        if (event.data && event.data.type === 'NOTIFICATION_ACTION_SAFE') {
+          handleConfirmSafe();
+        } else if (event.data && event.data.type === 'NOTIFICATION_ACTION_SOS') {
+          triggerEmergencyEscalation('WATCH_ACTION_NO', 'User tapped NO (Send SOS) directly on watch/notification');
+        }
+      };
+      navigator.serviceWorker.addEventListener('message', handleSwMessage);
+      return () => {
+        navigator.serviceWorker.removeEventListener('message', handleSwMessage);
+      };
+    }
+  }, []);
 
   const [mapTapMode, setMapTapMode] = useState(null);
 
@@ -620,7 +654,7 @@ export default function App() {
 
     setActiveTab('safety_check');
     logAudit('ROUTE_MONITOR', 'Persistent Route Deviation Detected (145m off polyline)', 'Started Private Safety Check #1 of 3');
-    sendBrowserNotification("🚨 ShieldX Safety Check", "Route deviation detected (145m off-route). Are you safe?");
+    sendBrowserNotification("🚨 ShieldX Safety Check", "Route deviation detected (145m off-route). Are you safe?", true);
   };
 
   const handleConfirmSafe = () => {
