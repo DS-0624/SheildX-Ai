@@ -114,6 +114,75 @@ export default function App() {
     return typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default';
   });
 
+  const [mapTapMode, setMapTapMode] = useState(null);
+
+  // --- Real Geocoding Search State ---
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchTargetField, setSearchTargetField] = useState('DESTINATION');
+  const [geocodingResults, setGeocodingResults] = useState([]);
+  const [isSearchingGeocode, setIsSearchingGeocode] = useState(false);
+
+  // Compute dynamic route polyline points
+  const computedRoutePoints = [
+    { lat: journeyForm.startLat, lng: journeyForm.startLng },
+    { lat: (journeyForm.startLat * 0.75 + journeyForm.destinationLat * 0.25), lng: (journeyForm.startLng * 0.75 + journeyForm.destinationLng * 0.25) },
+    { lat: (journeyForm.startLat * 0.5 + journeyForm.destinationLat * 0.5) + 0.003, lng: (journeyForm.startLng * 0.5 + journeyForm.destinationLng * 0.5) - 0.003 },
+    { lat: (journeyForm.startLat * 0.25 + journeyForm.destinationLat * 0.75), lng: (journeyForm.startLng * 0.25 + journeyForm.destinationLng * 0.75) },
+    { lat: journeyForm.destinationLat, lng: journeyForm.destinationLng }
+  ];
+
+  // --- Active Journey State ---
+  const [journeyState, setJourneyState] = useState({
+    journeyId: null,
+    status: 'DRAFT',
+    startedAt: null,
+    etaMinutesRemaining: 25,
+    distanceKmRemaining: 5.2,
+    currentLocation: { lat: journeyForm.startLat, lng: journeyForm.startLng, label: 'My Live GPS Location', accuracy: 8.5 },
+    routeStatus: 'NORMAL',
+    offRouteDistanceMeters: 0,
+    consecutiveOffRouteUpdates: 0
+  });
+
+  // --- Private Safety Check State ---
+  const [safetyCheck, setSafetyCheck] = useState({
+    checkId: null,
+    active: false,
+    checkIndex: 1,
+    timerSeconds: 30,
+    maxAttempts: 3,
+    triggerReason: 'PERSISTENT_ROUTE_DEVIATION',
+    isVibrating: false,
+    status: 'IDLE'
+  });
+
+  const [emergencyAlert, setEmergencyAlert] = useState(null);
+  const [trackingSession, setTrackingSession] = useState(null);
+  const [copiedLinkNotification, setCopiedLinkNotification] = useState(false);
+
+  // Audit Logs
+  const [auditLogs, setAuditLogs] = useState([
+    {
+      id: 'LOG-101',
+      timestamp: new Date(Date.now() - 3600000).toLocaleTimeString(),
+      category: 'SYSTEM',
+      event: 'ShieldX AI Automatic Dispatch Engine Active',
+      details: 'WhatsApp location links dynamically use live domain origin'
+    }
+  ]);
+
+  const logAudit = (category, event, details) => {
+    const timeStr = new Date().toLocaleTimeString();
+    const newLog = {
+      id: `LOG-${Math.floor(1000 + Math.random() * 9000)}`,
+      timestamp: timeStr,
+      category,
+      event,
+      details
+    };
+    setAuditLogs((prev) => [newLog, ...prev]);
+  };
+
   const requestNotificationPermission = async () => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
       const perm = await Notification.requestPermission();
@@ -300,14 +369,6 @@ export default function App() {
     };
   }, [safetyCheck.active]);
 
-  const [mapTapMode, setMapTapMode] = useState(null);
-
-  // --- Real Geocoding Search State ---
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchTargetField, setSearchTargetField] = useState('DESTINATION');
-  const [geocodingResults, setGeocodingResults] = useState([]);
-  const [isSearchingGeocode, setIsSearchingGeocode] = useState(false);
-
   // --- OTP Countdown Timer ---
   useEffect(() => {
     let t = null;
@@ -402,67 +463,6 @@ export default function App() {
     } finally {
       setIsSearchingGeocode(false);
     }
-  };
-
-  // Compute dynamic route polyline points
-  const computedRoutePoints = [
-    { lat: journeyForm.startLat, lng: journeyForm.startLng },
-    { lat: (journeyForm.startLat * 0.75 + journeyForm.destinationLat * 0.25), lng: (journeyForm.startLng * 0.75 + journeyForm.destinationLng * 0.25) },
-    { lat: (journeyForm.startLat * 0.5 + journeyForm.destinationLat * 0.5) + 0.003, lng: (journeyForm.startLng * 0.5 + journeyForm.destinationLng * 0.5) - 0.003 },
-    { lat: (journeyForm.startLat * 0.25 + journeyForm.destinationLat * 0.75), lng: (journeyForm.startLng * 0.25 + journeyForm.destinationLng * 0.75) },
-    { lat: journeyForm.destinationLat, lng: journeyForm.destinationLng }
-  ];
-
-  // --- Active Journey State ---
-  const [journeyState, setJourneyState] = useState({
-    journeyId: null,
-    status: 'DRAFT',
-    startedAt: null,
-    etaMinutesRemaining: 25,
-    distanceKmRemaining: 5.2,
-    currentLocation: { lat: journeyForm.startLat, lng: journeyForm.startLng, label: 'My Live GPS Location', accuracy: 8.5 },
-    routeStatus: 'NORMAL',
-    offRouteDistanceMeters: 0,
-    consecutiveOffRouteUpdates: 0
-  });
-
-  // --- Private Safety Check State ---
-  const [safetyCheck, setSafetyCheck] = useState({
-    checkId: null,
-    active: false,
-    checkIndex: 1,
-    timerSeconds: 30,
-    maxAttempts: 3,
-    triggerReason: 'PERSISTENT_ROUTE_DEVIATION',
-    isVibrating: false,
-    status: 'IDLE'
-  });
-
-  const [emergencyAlert, setEmergencyAlert] = useState(null);
-  const [trackingSession, setTrackingSession] = useState(null);
-  const [copiedLinkNotification, setCopiedLinkNotification] = useState(false);
-
-  // Audit Logs
-  const [auditLogs, setAuditLogs] = useState([
-    {
-      id: 'LOG-101',
-      timestamp: new Date(Date.now() - 3600000).toLocaleTimeString(),
-      category: 'SYSTEM',
-      event: 'ShieldX AI Automatic Dispatch Engine Active',
-      details: 'WhatsApp location links dynamically use live domain origin'
-    }
-  ]);
-
-  const logAudit = (category, event, details) => {
-    const timeStr = new Date().toLocaleTimeString();
-    const newLog = {
-      id: `LOG-${Math.floor(1000 + Math.random() * 9000)}`,
-      timestamp: timeStr,
-      category,
-      event,
-      details
-    };
-    setAuditLogs((prev) => [newLog, ...prev]);
   };
 
   // --- 30-Second Escalation Loop ---
