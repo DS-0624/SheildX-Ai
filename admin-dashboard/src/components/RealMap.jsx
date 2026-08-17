@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 
 /**
  * RealMap Component — Renders real interactive OpenStreetMap tiles via Leaflet
@@ -311,8 +310,8 @@ export default function RealMap({
         border: '1px solid #23314e'
       };
 
-  const renderMapContent = () => (
-    <>
+  return (
+    <div style={containerStyle}>
       <div ref={mapContainerRef} style={{ width: '100%', height: '100%', borderRadius: isFullscreen ? 0 : '12px' }} />
 
       {/* Top Map Control Bar (Mobile & Desktop Responsive) */}
@@ -321,7 +320,7 @@ export default function RealMap({
         top: '12px',
         left: '12px',
         right: '12px',
-        zIndex: 2147483647,
+        zIndex: 10000000,
         display: 'flex',
         justify: 'space-between',
         alignItems: 'center',
@@ -396,7 +395,7 @@ export default function RealMap({
           top: '54px',
           left: '50%',
           transform: 'translateX(-50%)',
-          zIndex: 2147483647,
+          zIndex: 10000000,
           background: tapMode === 'START' ? 'rgba(16, 185, 129, 0.95)' : 'rgba(239, 68, 68, 0.95)',
           color: '#ffffff',
           padding: '6px 16px',
@@ -419,7 +418,7 @@ export default function RealMap({
             position: 'absolute',
             bottom: '16px',
             right: '16px',
-            zIndex: 2147483647,
+            zIndex: 10000000,
             background: '#131b2e',
             color: '#3b82f6',
             border: '1px solid #3b82f6',
@@ -437,42 +436,6 @@ export default function RealMap({
           🎯 Use My Device GPS
         </button>
       )}
-    </>
-  );
-
-  if (isFullscreen && typeof document !== 'undefined') {
-    return createPortal(
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        width: '100vw',
-        height: '100vh',
-        zIndex: 2147483647,
-        backgroundColor: '#090d16',
-        borderRadius: 0,
-        isolation: 'isolate'
-      }}>
-        {renderMapContent()}
-      </div>,
-      document.body
-    );
-  }
-
-  return (
-    <div style={{
-      position: 'relative',
-      zIndex: 1,
-      isolation: 'isolate',
-      width: '100%',
-      height: height,
-      borderRadius: '12px',
-      overflow: 'hidden',
-      border: '1px solid #23314e'
-    }}>
-      {renderMapContent()}
     </div>
   );
 }
