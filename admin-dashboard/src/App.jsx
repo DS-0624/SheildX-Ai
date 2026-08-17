@@ -178,6 +178,46 @@ export default function App() {
     }
   }, []);
 
+  // --- FIRE-BOLTT 080 BLUETOOTH WATCH SIDE BUTTON & MEDIA KEY LISTENER ---
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Intercept Bluetooth Media Keys / Side Crown buttons sent from Fire-Boltt Watch
+      const isMediaKey = [
+        'MediaPlayPause', 'MediaTrackNext', 'MediaTrackPrevious',
+        'AudioVolumeUp', 'AudioVolumeDown', 'VolumeUp', 'VolumeDown', 'Space', 'Enter'
+      ].includes(e.code) || [179, 176, 177, 175, 174, 32, 13].includes(e.keyCode);
+
+      if (isMediaKey && safetyCheck.active) {
+        e.preventDefault();
+        logAudit('BLUETOOTH_WATCH', 'Fire-Boltt Watch Wrist Button Pressed', 'Marked user as CONFIRMED SAFE via Bluetooth Key');
+        handleConfirmSafe();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    // HTML5 MediaSession API for smartwatch media controls
+    if ('mediaSession' in navigator) {
+      try {
+        navigator.mediaSession.setActionHandler('play', () => {
+          if (safetyCheck.active) handleConfirmSafe();
+        });
+        navigator.mediaSession.setActionHandler('pause', () => {
+          if (safetyCheck.active) handleConfirmSafe();
+        });
+        navigator.mediaSession.setActionHandler('nexttrack', () => {
+          if (safetyCheck.active) triggerEmergencyEscalation('BLUETOOTH_WATCH_SOS', 'Emergency SOS triggered via Watch Key');
+        });
+      } catch (err) {
+        console.warn('MediaSession handler setup:', err);
+      }
+    }
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [safetyCheck.active]);
+
   const [mapTapMode, setMapTapMode] = useState(null);
 
   // --- Real Geocoding Search State ---
