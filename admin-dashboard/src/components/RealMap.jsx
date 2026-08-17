@@ -40,21 +40,29 @@ export default function RealMap({
     DARK: {
       url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
       attribution: '&copy; CARTO & OpenStreetMap',
+      maxNativeZoom: 19,
+      maxZoom: 20,
       label: '🌙 Dark'
     },
     SATELLITE: {
       url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+      attribution: 'Tiles &copy; Esri &mdash; HD Satellite Photography',
+      maxNativeZoom: 18,
+      maxZoom: 20,
       label: '🛰️ Satellite'
     },
     STREET: {
       url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
       attribution: '&copy; OpenStreetMap contributors',
+      maxNativeZoom: 19,
+      maxZoom: 20,
       label: '🗺️ Street'
     },
     LIGHT: {
       url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
       attribution: '&copy; CARTO & OpenStreetMap',
+      maxNativeZoom: 19,
+      maxZoom: 20,
       label: '☀️ Day Light'
     }
   };
@@ -70,17 +78,23 @@ export default function RealMap({
     if (!mapInstanceRef.current) {
       const map = L.map(mapContainerRef.current, {
         center: [currentPos.lat || startPos.lat, currentPos.lng || startPos.lng],
-        zoom: 13,
+        zoom: 14,
+        maxZoom: 20,
         zoomControl: interactive,
         dragging: interactive,
         touchZoom: interactive,
-        scrollWheelZoom: interactive
+        scrollWheelZoom: interactive,
+        zoomAnimation: true,
+        fadeAnimation: true,
+        markerZoomAnimation: true,
+        wheelPxPerZoomLevel: 60
       });
 
       const initialProvider = tileProviders[mapStyle] || tileProviders.DARK;
       const tileLayer = L.tileLayer(initialProvider.url, {
         attribution: initialProvider.attribution,
-        maxZoom: 19,
+        maxNativeZoom: initialProvider.maxNativeZoom,
+        maxZoom: initialProvider.maxZoom,
         subdomains: 'abcd'
       }).addTo(map);
 
@@ -93,6 +107,7 @@ export default function RealMap({
     // Update Tile Layer if Style Changed
     if (tileLayerRef.current) {
       const provider = tileProviders[mapStyle] || tileProviders.DARK;
+      tileLayerRef.current.options.maxNativeZoom = provider.maxNativeZoom;
       tileLayerRef.current.setUrl(provider.url);
     }
 

@@ -394,30 +394,44 @@ export default function App() {
     return () => clearInterval(t);
   }, [authStep, otpTimer]);
 
-  // --- AUTOMATICALLY ACQUIRE REAL USER LIVE GPS POSITION ON APP LOAD ---
+  // --- REAL-TIME CONTINUOUS HIGH-ACCURACY GPS TRACKING ENGINE ---
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
+    if (typeof window !== 'undefined' && navigator.geolocation) {
+      const watchId = navigator.geolocation.watchPosition(
         (pos) => {
-          const lat = parseFloat(pos.coords.latitude.toFixed(4));
-          const lng = parseFloat(pos.coords.longitude.toFixed(4));
+          const lat = Number(pos.coords.latitude.toFixed(6));
+          const lng = Number(pos.coords.longitude.toFixed(6));
+          const acc = pos.coords.accuracy || 8.5;
+
           setJourneyForm((prev) => ({
             ...prev,
             startLat: lat,
             startLng: lng,
             startName: 'My Live GPS Location (Where I am now)',
-            startAddress: `Current GPS Coordinates (${lat}° N, ${lng}° E)`
+            startAddress: `Exact GPS (${lat}° N, ${lng}° E) • ±${acc.toFixed(0)}m accuracy`
           }));
+
           setJourneyState((prev) => ({
             ...prev,
-            currentLocation: { lat, lng, label: 'My Live GPS Location', accuracy: pos.coords.accuracy }
+            currentLocation: {
+              lat,
+              lng,
+              label: `📍 Live Location (±${acc.toFixed(0)}m accuracy)`,
+              accuracy: acc
+            }
           }));
         },
         (err) => {
-          console.warn('Auto GPS fetch error:', err.message);
+          console.warn('Real-time GPS tracking warning:', err.message);
         },
-        { enableHighAccuracy: true, timeout: 10000 }
+        {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0
+        }
       );
+
+      return () => navigator.geolocation.clearWatch(watchId);
     }
   }, []);
 
