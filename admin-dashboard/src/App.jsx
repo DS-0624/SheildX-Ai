@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Shield, Navigation, MapPin, AlertTriangle, Phone, Mail, Watch, Mic, MicOff,
   CheckCircle, Clock, Lock, User, Settings, Activity, Send, RefreshCw, 
@@ -2291,8 +2292,8 @@ export default function App() {
 
       </main>
 
-      {/* ROOT-LEVEL MOBILE FULLSCREEN MAP MODAL */}
-      {showFullscreenMapModal && (
+      {/* ROOT-LEVEL MOBILE FULLSCREEN MAP MODAL (MOUNTED TO DOCUMENT.BODY) */}
+      {showFullscreenMapModal && typeof document !== 'undefined' && createPortal(
         <div style={{
           position: 'fixed',
           top: 0,
@@ -2301,7 +2302,7 @@ export default function App() {
           bottom: 0,
           width: '100vw',
           height: '100vh',
-          zIndex: 99999999,
+          zIndex: 2147483647,
           backgroundColor: '#090d16',
           display: 'flex',
           flexDirection: 'column'
@@ -2312,7 +2313,8 @@ export default function App() {
             borderBottom: '1px solid #23314e',
             display: 'flex',
             justify: 'space-between',
-            alignItems: 'center'
+            alignItems: 'center',
+            zIndex: 2147483647
           }}>
             <button
               onClick={() => setShowFullscreenMapModal(false)}
@@ -2351,7 +2353,8 @@ export default function App() {
               tapMode={mapTapMode}
             />
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
