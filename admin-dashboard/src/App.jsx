@@ -81,8 +81,13 @@ export default function App() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0 && !parsed[0].id.includes('c_default')) {
-          return parsed;
+        if (Array.isArray(parsed)) {
+          return parsed.filter(c => 
+            !c.name.toLowerCase().includes('sameer') && 
+            !c.phone.includes('9063080406') && 
+            !c.id.includes('c_default') && 
+            !c.id.includes('c_101')
+          );
         }
       } catch (e) {}
     }
@@ -433,7 +438,16 @@ export default function App() {
   }, [userProfile]);
 
   useEffect(() => {
-    localStorage.setItem('shieldx_emergency_contacts', JSON.stringify(emergencyContacts));
+    const cleaned = emergencyContacts.filter(c => 
+      !c.name.toLowerCase().includes('sameer') && 
+      !c.phone.includes('9063080406') && 
+      !c.id.includes('c_default') &&
+      !c.id.includes('c_101')
+    );
+    if (cleaned.length !== emergencyContacts.length) {
+      setEmergencyContacts(cleaned);
+    }
+    localStorage.setItem('shieldx_emergency_contacts', JSON.stringify(cleaned));
   }, [emergencyContacts]);
 
   // Debounced auto-search for worldwide geocoding
