@@ -327,28 +327,28 @@ export default function RealMap({
         gap: '6px',
         pointerEvents: 'none'
       }}>
-        {/* Fullscreen Maximize / Exit Button */}
+        {/* Fullscreen Maximize / Minimize Exit Button */}
         <button
           onClick={() => setIsFullscreen(!isFullscreen)}
-          title={isFullscreen ? 'Exit Fullscreen Map View (or press ESC key)' : 'Maximize Map View (View Entire Route)'}
+          title={isFullscreen ? 'Minimize / Exit Fullscreen Map View (or press ESC key)' : 'Maximize Map View (View Entire Route)'}
           style={{
             pointerEvents: 'auto',
-            background: isFullscreen ? '#ef4444' : 'rgba(13, 20, 36, 0.95)',
+            background: isFullscreen ? 'linear-gradient(135deg, #ef4444, #dc2626)' : 'rgba(13, 21, 39, 0.95)',
             color: '#ffffff',
             border: isFullscreen ? '2px solid #ffffff' : '1px solid #3b82f6',
             borderRadius: '8px',
-            padding: isFullscreen ? '8px 14px' : '6px 10px',
+            padding: isFullscreen ? '8px 16px' : '7px 12px',
             fontSize: '11px',
             fontWeight: '900',
             cursor: 'pointer',
-            boxShadow: '0 4px 14px rgba(0,0,0,0.8)',
+            boxShadow: isFullscreen ? '0 4px 20px rgba(239, 68, 68, 0.8)' : '0 4px 14px rgba(0,0,0,0.8)',
             display: 'flex',
             alignItems: 'center',
-            gap: '4px',
+            gap: '6px',
             whiteSpace: 'nowrap'
           }}
         >
-          {isFullscreen ? '✕ EXIT' : '⛶ MAXIMIZE'}
+          {isFullscreen ? '✕ MINIMIZE / EXIT' : '⛶ MAXIMIZE MAP'}
         </button>
 
         {/* Map Layer Theme Pills */}
