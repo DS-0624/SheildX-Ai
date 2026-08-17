@@ -40,6 +40,7 @@ export default function App() {
   const [presentationSpeed, setPresentationSpeed] = useState(false); // false = 30s, true = 3s for fast presentation
   const checkIntervalSeconds = presentationSpeed ? 3 : 30;
   const [autoOpenWhatsapp, setAutoOpenWhatsapp] = useState(true);
+  const [showFullscreenMapModal, setShowFullscreenMapModal] = useState(false);
 
   // --- Dynamic Authenticated User Profile (PERSISTED) ---
   const [userProfile, setUserProfile] = useState(() => {
@@ -1708,6 +1709,7 @@ export default function App() {
                   onLocationFound={handleRealDeviceGPSFound}
                   onMapClick={handleMapClickCoordinates}
                   tapMode={mapTapMode}
+                  onToggleMaximize={() => setShowFullscreenMapModal(true)}
                 />
               </div>
 
@@ -2288,6 +2290,69 @@ export default function App() {
         )}
 
       </main>
+
+      {/* ROOT-LEVEL MOBILE FULLSCREEN MAP MODAL */}
+      {showFullscreenMapModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          width: '100vw',
+          height: '100vh',
+          zIndex: 99999999,
+          backgroundColor: '#090d16',
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          <div style={{
+            padding: '12px 16px',
+            background: '#0d1527',
+            borderBottom: '1px solid #23314e',
+            display: 'flex',
+            justify: 'space-between',
+            alignItems: 'center'
+          }}>
+            <button
+              onClick={() => setShowFullscreenMapModal(false)}
+              style={{
+                background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                color: '#ffffff',
+                border: '2px solid #ffffff',
+                borderRadius: '10px',
+                padding: '10px 18px',
+                fontSize: '13px',
+                fontWeight: '900',
+                cursor: 'pointer',
+                boxShadow: '0 4px 20px rgba(239, 68, 68, 0.9)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              ✕ EXIT FULLSCREEN (ESC)
+            </button>
+            <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#10b981' }}>
+              📍 Live High-Resolution Map Route
+            </span>
+          </div>
+
+          <div style={{ flex: 1, position: 'relative' }}>
+            <RealMap
+              startPos={{ lat: journeyForm.startLat, lng: journeyForm.startLng, label: `🟢 ${userProfile.name} (Live Location)` }}
+              destPos={{ lat: journeyForm.destinationLat, lng: journeyForm.destinationLng, label: `🔴 ${journeyForm.destinationName}` }}
+              currentPos={{ lat: journeyForm.startLat, lng: journeyForm.startLng, label: userProfile.name }}
+              routePoints={computedRoutePoints}
+              isDeviating={false}
+              height="100%"
+              onLocationFound={handleRealDeviceGPSFound}
+              onMapClick={handleMapClickCoordinates}
+              tapMode={mapTapMode}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

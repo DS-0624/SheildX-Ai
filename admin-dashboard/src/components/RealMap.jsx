@@ -21,7 +21,8 @@ export default function RealMap({
   interactive = true,
   onLocationFound = null,
   onMapClick = null,
-  tapMode = null // 'START' | 'DESTINATION' | null
+  tapMode = null, // 'START' | 'DESTINATION' | null
+  onToggleMaximize = null
 }) {
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -224,14 +225,20 @@ export default function RealMap({
 
   }, [startPos, destPos, currentPos, routePoints, isDeviating, accuracyMeters, interactive, mapStyle]);
 
-  // Handle Fullscreen Invalidate Size
+  // Handle Fullscreen & Height Invalidate Size
   useEffect(() => {
     if (mapInstanceRef.current) {
-      setTimeout(() => {
-        mapInstanceRef.current.invalidateSize();
-      }, 150);
+      const map = mapInstanceRef.current;
+      const t1 = setTimeout(() => map.invalidateSize(), 50);
+      const t2 = setTimeout(() => map.invalidateSize(), 200);
+      const t3 = setTimeout(() => map.invalidateSize(), 500);
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+        clearTimeout(t3);
+      };
     }
-  }, [isFullscreen]);
+  }, [isFullscreen, height, mapStyle]);
 
   // Handle Map Clicks to Set Pin (Uber/Rapido style)
   useEffect(() => {
@@ -329,7 +336,13 @@ export default function RealMap({
       }}>
         {/* Fullscreen Maximize / Minimize Exit Button */}
         <button
-          onClick={() => setIsFullscreen(!isFullscreen)}
+          onClick={() => {
+            if (onToggleMaximize) {
+              onToggleMaximize();
+            } else {
+              setIsFullscreen(!isFullscreen);
+            }
+          }}
           title={isFullscreen ? 'Minimize / Exit Fullscreen Map View (or press ESC key)' : 'Maximize Map View (View Entire Route)'}
           style={{
             pointerEvents: 'auto',
