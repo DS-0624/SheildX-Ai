@@ -647,19 +647,30 @@ export default function App() {
         const cleanTranscript = currentTranscript.toLowerCase();
         const targetPhrase = userProfile.voicePhrase.toLowerCase();
 
-        if (cleanTranscript.includes(targetPhrase) && !voiceMatchedAlert) {
-          setVoiceMatchedAlert(true);
-          logAudit('VOICE_ENGINE', `REAL VOICE PHRASE MATCHED: "${userProfile.voicePhrase}"`, `Transcript: "${currentTranscript}"`);
-          
-          setTimeout(() => {
-            setVoiceMatchedAlert(false);
-          }, 4000);
+        // 1. Check for SAFE / RESOLVE Keywords (Asha, Safe, Cancel, Stop, I am Safe)
+        const isSafeKeyword = cleanTranscript.includes(targetPhrase) || 
+                             cleanTranscript.includes('safe') || 
+                             cleanTranscript.includes('asha') || 
+                             cleanTranscript.includes('cancel') || 
+                             cleanTranscript.includes('stop');
 
-          if (userProfile.voiceTriggerType === 'IMMEDIATE_SOS') {
-            triggerEmergencyEscalation('VOICE_IMMEDIATE_SOS', `Real Voice Phrase "${userProfile.voicePhrase}" spoken by ${userProfile.name}`);
-          } else {
-            handleSimulateRouteDeviation();
-          }
+        // 2. Check for EMERGENCY / DANGER Keywords (Help, Emergency, SOS, Danger, Save me)
+        const isDangerKeyword = cleanTranscript.includes('help') || 
+                               cleanTranscript.includes('emergency') || 
+                               cleanTranscript.includes('danger') || 
+                               cleanTranscript.includes('sos') || 
+                               cleanTranscript.includes('save me');
+
+        if (isSafeKeyword && !voiceMatchedAlert) {
+          setVoiceMatchedAlert(true);
+          logAudit('VOICE_ENGINE', `REAL VOICE SAFETY PHRASE MATCHED: "${currentTranscript}"`, `User marked CONFIRMED SAFE via Voice Code`);
+          handleConfirmSafe();
+          setTimeout(() => setVoiceMatchedAlert(false), 4000);
+        } else if (isDangerKeyword && !voiceMatchedAlert) {
+          setVoiceMatchedAlert(true);
+          logAudit('VOICE_ENGINE', `REAL VOICE EMERGENCY SOS MATCHED: "${currentTranscript}"`, `Emergency SOS dispatched via Voice Code`);
+          triggerEmergencyEscalation('VOICE_EMERGENCY_KEYWORD', `Real Voice Emergency Phrase "${currentTranscript}" spoken by ${userProfile.name}`);
+          setTimeout(() => setVoiceMatchedAlert(false), 4000);
         }
       };
 
