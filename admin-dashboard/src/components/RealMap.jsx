@@ -107,23 +107,27 @@ export default function RealMap({
 
     // Update Tile Layer & Street Labels Overlay if Style Changed
     if (tileLayerRef.current) {
-      const provider = tileProviders[mapStyle] || tileProviders.DARK;
-      tileLayerRef.current.options.maxNativeZoom = provider.maxNativeZoom;
-      tileLayerRef.current.setUrl(provider.url);
+      try {
+        const provider = tileProviders[mapStyle] || tileProviders.DARK;
+        tileLayerRef.current.options.maxNativeZoom = provider.maxNativeZoom;
+        tileLayerRef.current.setUrl(provider.url);
 
-      if (labelLayerRef.current) {
-        map.removeLayer(labelLayerRef.current);
-        labelLayerRef.current = null;
-      }
+        if (labelLayerRef.current) {
+          try { map.removeLayer(labelLayerRef.current); } catch (e) {}
+          labelLayerRef.current = null;
+        }
 
-      if (provider.labelUrl) {
-        const labelLayer = L.tileLayer(provider.labelUrl, {
-          maxNativeZoom: 19,
-          maxZoom: 20,
-          subdomains: 'abcd',
-          pane: 'shadowPane'
-        }).addTo(map);
-        labelLayerRef.current = labelLayer;
+        if (provider.labelUrl) {
+          const labelLayer = L.tileLayer(provider.labelUrl, {
+            maxNativeZoom: 19,
+            maxZoom: 20,
+            subdomains: 'abcd',
+            zIndex: 500
+          }).addTo(map);
+          labelLayerRef.current = labelLayer;
+        }
+      } catch (err) {
+        console.warn('Leaflet tile update warning:', err);
       }
     }
 
