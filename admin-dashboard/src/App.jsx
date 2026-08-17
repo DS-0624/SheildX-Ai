@@ -109,6 +109,41 @@ export default function App() {
     watchConnected: true
   });
 
+  // --- BROWSER NOTIFICATION ENGINE FOR SMARTWATCH WRIST VIBRATION MIRRORING ---
+  const [notificationPermission, setNotificationPermission] = useState(() => {
+    return typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default';
+  });
+
+  const requestNotificationPermission = async () => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      const perm = await Notification.requestPermission();
+      setNotificationPermission(perm);
+      if (perm === 'granted') {
+        new Notification("🚨 ShieldX Watch Alert Enabled", {
+          body: "Your Fire-Boltt 080 smartwatch is now ready to receive wrist safety alerts!",
+          icon: "/favicon.svg"
+        });
+      }
+    } else {
+      alert("Browser Notifications are not supported on this browser.");
+    }
+  };
+
+  const sendBrowserNotification = (title, body) => {
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+      try {
+        new Notification(title, {
+          body,
+          icon: "/favicon.svg",
+          vibrate: [500, 200, 500, 200, 500],
+          tag: 'shieldx-safety-alert'
+        });
+      } catch (err) {
+        console.warn("Browser notification error:", err);
+      }
+    }
+  };
+
   const [mapTapMode, setMapTapMode] = useState(null);
 
   // --- Real Geocoding Search State ---
@@ -585,6 +620,7 @@ export default function App() {
 
     setActiveTab('safety_check');
     logAudit('ROUTE_MONITOR', 'Persistent Route Deviation Detected (145m off polyline)', 'Started Private Safety Check #1 of 3');
+    sendBrowserNotification("🚨 ShieldX Safety Check", "Route deviation detected (145m off-route). Are you safe?");
   };
 
   const handleConfirmSafe = () => {
@@ -1164,6 +1200,27 @@ export default function App() {
 
         {/* Dynamic Controls Header & User Logout */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <button
+            onClick={requestNotificationPermission}
+            title="Enable browser notifications to mirror safety alerts to your Fire-Boltt 080 watch"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: notificationPermission === 'granted' ? '#0d2417' : '#2b1c09',
+              border: notificationPermission === 'granted' ? '1px solid #10b981' : '1px solid #f59e0b',
+              color: notificationPermission === 'granted' ? '#34d399' : '#fcd34d',
+              padding: '6px 12px',
+              borderRadius: '10px',
+              fontSize: '11px',
+              fontWeight: 'bold',
+              cursor: 'pointer'
+            }}
+          >
+            <Bell size={14} />
+            {notificationPermission === 'granted' ? 'Watch Wrist Alerts Active' : 'Enable Watch Wrist Alerts'}
+          </button>
+
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#0d1f18', border: '1px solid #10b981', padding: '6px 12px', borderRadius: '10px' }}>
             <MessageCircle size={14} color="#25D366" />
             <span style={{ fontSize: '11px', color: '#34d399', fontWeight: 'bold' }}>
