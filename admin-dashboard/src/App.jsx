@@ -161,6 +161,88 @@ export default function App() {
     }
   };
 
+  const handleConfirmSafe = () => {
+    setJourneyState((prev) => ({
+      ...prev,
+      currentLocation: { lat: journeyForm.startLat, lng: journeyForm.startLng, label: `En route: ${journeyForm.startName} → ${journeyForm.destinationName}`, accuracy: 8.5 },
+      routeStatus: 'NORMAL',
+      offRouteDistanceMeters: 0,
+      consecutiveOffRouteUpdates: 0
+    }));
+
+    setSafetyCheck({ checkId: null, active: false, checkIndex: 1, timerSeconds: checkIntervalSeconds, maxAttempts: 3, triggerReason: 'PERSISTENT_ROUTE_DEVIATION', isVibrating: false, status: 'CONFIRMED_SAFE' });
+    setActiveTab('active_journey');
+    logAudit('USER_CHECKIN', 'User Confirmed Safe ("I\'m Safe")', 'Private safety check resolved. Marker snapped back to route.');
+  };
+
+  // --- EMERGENCY ESCALATION & DYNAMIC LOCAL LIVE TRACKING LINK DISPATCH ---
+  const triggerEmergencyEscalation = (reasonCode, reasonText) => {
+    const alertId = `alt_${Date.now()}`;
+    const token = `trk_${Math.random().toString(36).substring(2, 15)}`;
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toLocaleTimeString();
+
+    setSafetyCheck((prev) => ({ ...prev, active: false, status: 'ESCALATED', isVibrating: false }));
+    setJourneyState((prev) => ({ ...prev, routeStatus: 'EMERGENCY_ALERT' }));
+
+    const newAlert = {
+      alertId,
+      user_name: userProfile.name,
+      triggerReason: reasonCode,
+      description: reasonText,
+      status: 'NOTIFIED',
+      location: journeyState.currentLocation,
+      contactsNotified: emergencyContacts,
+      trackingToken: token,
+      trackingExpiresAt: expiresAt,
+      createdAt: new Date().toLocaleTimeString()
+    };
+
+    setEmergencyAlert(newAlert);
+    setTrackingSession({ token, expiresAt, active: true, viewsCount: 3 });
+
+    const lat = journeyState.currentLocation.lat;
+    const lng = journeyState.currentLocation.lng;
+    
+    // 1. Direct Real Google Maps GPS link (works 100% on any device globally)
+    const googleMapsUrl = `https://maps.google.com/?q=${lat},${lng}`;
+    
+    // 2. Real Dynamic Live Origin Tracking link (grabs current window.location.origin!)
+    const currentOrigin = window.location.origin;
+    const localTrackingUrl = `${currentOrigin}/?track=${token}`;
+
+    const waText = encodeURIComponent(
+      `🚨 EMERGENCY SOS ALERT — ShieldX AI\n\n` +
+      `Name: ${userProfile.name}\n` +
+      `Phone: ${userProfile.phone}\n` +
+      `Reason: ${reasonText}\n` +
+      `Time: ${new Date().toLocaleTimeString()}\n` +
+      `Start Location: ${journeyForm.startName}\n` +
+      `Destination: ${journeyForm.destinationName}\n\n` +
+      `📍 Google Maps Location: ${googleMapsUrl}\n` +
+      `🔗 Live Emergency Tracking: ${localTrackingUrl}\n\n` +
+      `Please help or contact emergency authorities immediately!`
+    );
+
+    const contactWaLinks = emergencyContacts
+      .filter(c => c.sendWhatsapp && c.phone)
+      .map(c => ({
+        contactName: c.name,
+        phone: c.phone,
+        waUrl: `https://wa.me/${c.phone.replace(/[^0-9]/g, '')}?text=${waText}`
+      }));
+
+    setActiveTab('guardian_hub');
+
+    logAudit('WHATSAPP_DISPATCH', `WhatsApp Emergency Messages Generated for ${userProfile.name}`, `Google Maps: ${googleMapsUrl}`);
+
+    if (autoOpenWhatsapp && contactWaLinks.length > 0) {
+      setTimeout(() => {
+        window.open(contactWaLinks[0].waUrl, '_blank');
+        logAudit('WHATSAPP_AUTOLAUNCH', `Opened WhatsApp automatically to send location to ${contactWaLinks[0].contactName}`, contactWaLinks[0].phone);
+      }, 800);
+    }
+  };
+
   // --- LISTEN FOR SERVICE WORKER NOTIFICATION ACTION CLICKS (YES = SAFE, NO = SOS) ---
   useEffect(() => {
     if ('serviceWorker' in navigator) {
@@ -701,90 +783,8 @@ export default function App() {
     );
   };
 
-  const handleConfirmSafe = () => {
-    setJourneyState((prev) => ({
-      ...prev,
-      currentLocation: { lat: journeyForm.startLat, lng: journeyForm.startLng, label: `En route: ${journeyForm.startName} → ${journeyForm.destinationName}`, accuracy: 8.5 },
-      routeStatus: 'NORMAL',
-      offRouteDistanceMeters: 0,
-      consecutiveOffRouteUpdates: 0
-    }));
-
-    setSafetyCheck({ checkId: null, active: false, checkIndex: 1, timerSeconds: checkIntervalSeconds, maxAttempts: 3, triggerReason: 'PERSISTENT_ROUTE_DEVIATION', isVibrating: false, status: 'CONFIRMED_SAFE' });
-    setActiveTab('active_journey');
-    logAudit('USER_CHECKIN', 'User Confirmed Safe ("I\'m Safe")', 'Private safety check resolved. Marker snapped back to route.');
-  };
-
   const handleManualSOSNow = () => {
     triggerEmergencyEscalation('MANUAL_SOS', 'User pressed "Send Alert Now" directly on app or watch');
-  };
-
-  // --- EMERGENCY ESCALATION & DYNAMIC LOCAL LIVE TRACKING LINK DISPATCH ---
-  const triggerEmergencyEscalation = (reasonCode, reasonText) => {
-    const alertId = `alt_${Date.now()}`;
-    const token = `trk_${Math.random().toString(36).substring(2, 15)}`;
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toLocaleTimeString();
-
-    setSafetyCheck((prev) => ({ ...prev, active: false, status: 'ESCALATED', isVibrating: false }));
-    setJourneyState((prev) => ({ ...prev, routeStatus: 'EMERGENCY_ALERT' }));
-
-    const newAlert = {
-      alertId,
-      user_name: userProfile.name,
-      triggerReason: reasonCode,
-      description: reasonText,
-      status: 'NOTIFIED',
-      location: journeyState.currentLocation,
-      contactsNotified: emergencyContacts,
-      trackingToken: token,
-      trackingExpiresAt: expiresAt,
-      createdAt: new Date().toLocaleTimeString()
-    };
-
-    setEmergencyAlert(newAlert);
-    setTrackingSession({ token, expiresAt, active: true, viewsCount: 3 });
-
-    const lat = journeyState.currentLocation.lat;
-    const lng = journeyState.currentLocation.lng;
-    
-    // 1. Direct Real Google Maps GPS link (works 100% on any device globally)
-    const googleMapsUrl = `https://maps.google.com/?q=${lat},${lng}`;
-    
-    // 2. Real Dynamic Live Origin Tracking link (grabs current window.location.origin!)
-    const currentOrigin = window.location.origin;
-    const localTrackingUrl = `${currentOrigin}/?track=${token}`;
-
-    const waText = encodeURIComponent(
-      `🚨 EMERGENCY SOS ALERT — ShieldX AI\n\n` +
-      `Name: ${userProfile.name}\n` +
-      `Phone: ${userProfile.phone}\n` +
-      `Reason: ${reasonText}\n` +
-      `Time: ${new Date().toLocaleTimeString()}\n` +
-      `Start Location: ${journeyForm.startName}\n` +
-      `Destination: ${journeyForm.destinationName}\n\n` +
-      `📍 Google Maps Location: ${googleMapsUrl}\n` +
-      `🔗 Live Emergency Tracking: ${localTrackingUrl}\n\n` +
-      `Please help or contact emergency authorities immediately!`
-    );
-
-    const contactWaLinks = emergencyContacts
-      .filter(c => c.sendWhatsapp && c.phone)
-      .map(c => ({
-        contactName: c.name,
-        phone: c.phone,
-        waUrl: `https://wa.me/${c.phone.replace(/[^0-9]/g, '')}?text=${waText}`
-      }));
-
-    setActiveTab('guardian_hub');
-
-    logAudit('WHATSAPP_DISPATCH', `WhatsApp Emergency Messages Generated for ${userProfile.name}`, `Google Maps: ${googleMapsUrl}`);
-
-    if (autoOpenWhatsapp && contactWaLinks.length > 0) {
-      setTimeout(() => {
-        window.open(contactWaLinks[0].waUrl, '_blank');
-        logAudit('WHATSAPP_AUTOLAUNCH', `Opened WhatsApp automatically to send location to ${contactWaLinks[0].contactName}`, contactWaLinks[0].phone);
-      }, 800);
-    }
   };
 
   const handleResolveEmergency = () => {
