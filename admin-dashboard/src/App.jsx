@@ -292,23 +292,23 @@ export default function App() {
       `Please help or contact emergency authorities immediately!`
     );
 
-    const contactWaLinks = emergencyContacts
-      .filter(c => c.sendWhatsapp && c.phone)
-      .map(c => ({
-        contactName: c.name,
-        phone: c.phone,
-        waUrl: `https://wa.me/${c.phone.replace(/[^0-9]/g, '')}?text=${waText}`
-      }));
+    // Fallback to user profile phone if no emergency contacts added yet
+    const targetPhone = (emergencyContacts.length > 0 && emergencyContacts[0].phone) 
+      ? emergencyContacts[0].phone.replace(/[^0-9]/g, '') 
+      : userProfile.phone.replace(/[^0-9]/g, '');
+
+    const targetWaUrl = `https://wa.me/${targetPhone}?text=${waText}`;
 
     setActiveTab('guardian_hub');
 
-    logAudit('WHATSAPP_DISPATCH', `WhatsApp Emergency Messages Generated for ${userProfile.name}`, `Google Maps: ${googleMapsUrl}`);
+    logAudit('WHATSAPP_DISPATCH', `WhatsApp Emergency Message Generated for ${userProfile.name} (${targetPhone})`, `Google Maps: ${googleMapsUrl}`);
 
-    if (autoOpenWhatsapp && contactWaLinks.length > 0) {
+    if (autoOpenWhatsapp) {
       setTimeout(() => {
-        window.open(contactWaLinks[0].waUrl, '_blank');
-        logAudit('WHATSAPP_AUTOLAUNCH', `Opened WhatsApp automatically to send location to ${contactWaLinks[0].contactName}`, contactWaLinks[0].phone);
-      }, 800);
+        // Direct location navigation bypasses popup blockers in Chrome / Safari!
+        window.location.href = targetWaUrl;
+        logAudit('WHATSAPP_AUTOLAUNCH', `Auto-launched WhatsApp with live location to ${targetPhone}`, targetPhone);
+      }, 400);
     }
   };
 
