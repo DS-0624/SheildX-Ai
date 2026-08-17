@@ -30,7 +30,7 @@ export default function RealMap({
   const markersRef = useRef([]);
   const polylineRef = useRef(null);
   const deviationLineRef = useRef(null);
-  const circleRef = useRef(null);
+  const labelLayerRef = useRef(null);
 
   const [mapStyle, setMapStyle] = useState('DARK'); // 'DARK' | 'SATELLITE' | 'STREET' | 'LIGHT'
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -46,17 +46,18 @@ export default function RealMap({
     },
     SATELLITE: {
       url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-      attribution: 'Tiles &copy; Esri &mdash; HD Satellite Photography',
+      labelUrl: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png',
+      attribution: 'Tiles &copy; Esri HD Satellite + Street Labels',
       maxNativeZoom: 18,
       maxZoom: 20,
-      label: '🛰️ Satellite'
+      label: '🛰️ Satellite + Streets'
     },
     STREET: {
       url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
       attribution: '&copy; OpenStreetMap contributors',
       maxNativeZoom: 19,
       maxZoom: 20,
-      label: '🗺️ Street'
+      label: '🗺️ Street View'
     },
     LIGHT: {
       url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
@@ -104,11 +105,26 @@ export default function RealMap({
 
     const map = mapInstanceRef.current;
 
-    // Update Tile Layer if Style Changed
+    // Update Tile Layer & Street Labels Overlay if Style Changed
     if (tileLayerRef.current) {
       const provider = tileProviders[mapStyle] || tileProviders.DARK;
       tileLayerRef.current.options.maxNativeZoom = provider.maxNativeZoom;
       tileLayerRef.current.setUrl(provider.url);
+
+      if (labelLayerRef.current) {
+        map.removeLayer(labelLayerRef.current);
+        labelLayerRef.current = null;
+      }
+
+      if (provider.labelUrl) {
+        const labelLayer = L.tileLayer(provider.labelUrl, {
+          maxNativeZoom: 19,
+          maxZoom: 20,
+          subdomains: 'abcd',
+          pane: 'shadowPane'
+        }).addTo(map);
+        labelLayerRef.current = labelLayer;
+      }
     }
 
     // Clear existing markers & lines
