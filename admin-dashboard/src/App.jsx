@@ -295,7 +295,7 @@ export default function App() {
 
     const fullPhone = cleanPhone.startsWith('+') ? cleanPhone : `+91${cleanPhone}`;
     const waText = encodeURIComponent(
-      `🔒 *ShieldX AI Verification Code*\n\nHello ${loginName},\nYour 6-digit verification code is: *${code}*\n\nValid for 5 minutes. Do not share this code with anyone.`
+      `🔒 ShieldX AI Verification Code\n\nHello ${loginName},\nYour 6-digit verification code is: ${code}\n\nValid for 5 minutes. Do not share this code with anyone.`
     );
     const waUrl = `https://wa.me/${fullPhone.replace('+', '')}?text=${waText}`;
     setWhatsappOtpLink(waUrl);
@@ -613,15 +613,15 @@ export default function App() {
     const localTrackingUrl = `${currentOrigin}/?track=${token}`;
 
     const waText = encodeURIComponent(
-      `🚨 *EMERGENCY SOS ALERT — ShieldX AI*\n\n` +
-      `*Name:* ${userProfile.name}\n` +
-      `*Phone:* ${userProfile.phone}\n` +
-      `*Reason:* ${reasonText}\n` +
-      `*Time:* ${new Date().toLocaleTimeString()}\n` +
-      `*Start Location:* ${journeyForm.startName}\n` +
-      `*Destination:* ${journeyForm.destinationName}\n\n` +
-      `📍 *Google Maps Location:* ${googleMapsUrl}\n` +
-      `🔗 *Live Emergency Tracking:* ${localTrackingUrl}\n\n` +
+      `🚨 EMERGENCY SOS ALERT — ShieldX AI\n\n` +
+      `Name: ${userProfile.name}\n` +
+      `Phone: ${userProfile.phone}\n` +
+      `Reason: ${reasonText}\n` +
+      `Time: ${new Date().toLocaleTimeString()}\n` +
+      `Start Location: ${journeyForm.startName}\n` +
+      `Destination: ${journeyForm.destinationName}\n\n` +
+      `📍 Google Maps Location: ${googleMapsUrl}\n` +
+      `🔗 Live Emergency Tracking: ${localTrackingUrl}\n\n` +
       `Please help or contact emergency authorities immediately!`
     );
 
@@ -755,13 +755,13 @@ export default function App() {
     const trackingUrl = trackingSession ? `${currentOrigin}/?track=${trackingSession.token}` : `${currentOrigin}/?track=live_session`;
 
     const text = encodeURIComponent(
-      `🚨 *SafeCircle Emergency Alert*\n` +
-      `*From:* ${userProfile.name} (${userProfile.phone})\n` +
-      `*Reason:* Possible danger / Route deviation unanswered\n` +
-      `*Start:* ${journeyForm.startName}\n` +
-      `*Destination:* ${journeyForm.destinationName}\n\n` +
-      `📍 *Live Google Maps Location:* ${googleMapsUrl}\n` +
-      `🔗 *Live Emergency Tracking:* ${trackingUrl}`
+      `🚨 SafeCircle Emergency Alert\n` +
+      `From: ${userProfile.name} (${userProfile.phone})\n` +
+      `Reason: Possible danger / Route deviation unanswered\n` +
+      `Start: ${journeyForm.startName}\n` +
+      `Destination: ${journeyForm.destinationName}\n\n` +
+      `📍 Live Google Maps Location: ${googleMapsUrl}\n` +
+      `🔗 Live Emergency Tracking: ${trackingUrl}`
     );
     return `https://wa.me/${contact.phone.replace(/[^0-9]/g, '')}?text=${text}`;
   };
