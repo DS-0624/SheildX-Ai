@@ -561,21 +561,19 @@ export default function App() {
     setServerOtp(code);
 
     const fullPhone = cleanPhone.startsWith('+') ? cleanPhone : `+91${cleanPhone}`;
+    const phoneDigits = fullPhone.replace(/[^0-9]/g, '');
     const waText = encodeURIComponent(
       `🔒 ShieldX AI Verification Code\n\nHello ${loginName},\nYour 6-digit verification code is: ${code}\n\nValid for 5 minutes. Do not share this code with anyone.`
     );
-    const waUrl = `https://wa.me/${fullPhone.replace('+', '')}?text=${waText}`;
-    setWhatsappOtpLink(waUrl);
+    // Direct native WhatsApp app link (bypasses browser WhatsApp web page completely)
+    const nativeWaUrl = `whatsapp://send?phone=${phoneDigits}&text=${waText}`;
+    setWhatsappOtpLink(nativeWaUrl);
 
     setTimeout(() => {
       setIsSendingOtp(false);
       setAuthStep('OTP_INPUT');
       setOtpTimer(30);
-      logAudit('OTP_DISPATCH', `Secret OTP generated for ${loginName} (${fullPhone})`, `Sent to WhatsApp/SMS`);
-      
-      if (autoOpenWhatsapp) {
-        window.open(waUrl, '_blank');
-      }
+      logAudit('OTP_DISPATCH', `Secret OTP generated for ${loginName} (${fullPhone})`, `Sent to WhatsApp App Directly`);
     }, 800);
   };
 
