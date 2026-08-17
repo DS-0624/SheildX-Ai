@@ -274,6 +274,17 @@ export default function RealMap({
     }
   };
 
+  // Add Escape key listener to exit fullscreen mode easily
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        setIsFullscreen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFullscreen]);
+
   const containerStyle = isFullscreen
     ? {
         position: 'fixed',
@@ -283,7 +294,7 @@ export default function RealMap({
         bottom: 0,
         width: '100vw',
         height: '100vh',
-        zIndex: 999999,
+        zIndex: 99000000,
         backgroundColor: '#090d16',
         borderRadius: 0,
         isolation: 'isolate'
@@ -303,19 +314,46 @@ export default function RealMap({
     <div style={containerStyle}>
       <div ref={mapContainerRef} style={{ width: '100%', height: '100%', borderRadius: isFullscreen ? 0 : '12px' }} />
 
+      {/* Prominent Fullscreen Exit / Maximize Toggle Button */}
+      <button
+        onClick={() => setIsFullscreen(!isFullscreen)}
+        title={isFullscreen ? 'Exit Fullscreen Map View (or press ESC key)' : 'Maximize Map View (View Entire Route)'}
+        style={{
+          position: 'absolute',
+          top: '16px',
+          left: '16px',
+          zIndex: 10000000,
+          background: isFullscreen ? '#ef4444' : 'rgba(13, 20, 36, 0.9)',
+          color: '#ffffff',
+          border: isFullscreen ? '2px solid #ffffff' : '1px solid #3b82f6',
+          borderRadius: '8px',
+          padding: isFullscreen ? '10px 18px' : '8px 14px',
+          fontSize: isFullscreen ? '14px' : '12px',
+          fontWeight: '900',
+          cursor: 'pointer',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}
+      >
+        {isFullscreen ? '✕ EXIT FULLSCREEN (ESC)' : '⛶ MAXIMIZE MAP'}
+      </button>
+
       {/* Advanced Map Layer Switcher Pills */}
       <div style={{
         position: 'absolute',
-        top: '12px',
-        right: isFullscreen ? '70px' : '12px',
-        zIndex: 1000,
+        top: '16px',
+        right: '16px',
+        zIndex: 10000000,
         display: 'flex',
         gap: '4px',
-        background: 'rgba(13, 20, 36, 0.85)',
+        background: 'rgba(13, 20, 36, 0.9)',
         backdropFilter: 'blur(8px)',
         padding: '4px',
         borderRadius: '8px',
-        border: '1px solid rgba(255, 255, 255, 0.15)'
+        border: '1px solid rgba(255, 255, 255, 0.25)',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.8)'
       }}>
         {Object.keys(tileProviders).map((key) => (
           <button
@@ -326,7 +364,7 @@ export default function RealMap({
               color: '#ffffff',
               border: 'none',
               borderRadius: '6px',
-              padding: '5px 10px',
+              padding: '6px 12px',
               fontSize: '11px',
               fontWeight: mapStyle === key ? 'bold' : 'normal',
               cursor: 'pointer',
@@ -337,33 +375,6 @@ export default function RealMap({
           </button>
         ))}
       </div>
-
-      {/* Fullscreen Maximize / Exit Toggle Button */}
-      <button
-        onClick={() => setIsFullscreen(!isFullscreen)}
-        title={isFullscreen ? 'Exit Fullscreen Map View' : 'Maximize Map View (View Entire Route)'}
-        style={{
-          position: 'absolute',
-          top: '12px',
-          right: isFullscreen ? '12px' : 'auto',
-          left: isFullscreen ? 'auto' : '12px',
-          zIndex: 1000,
-          background: isFullscreen ? '#ef4444' : 'rgba(13, 20, 36, 0.9)',
-          color: '#ffffff',
-          border: '1px solid #3b82f6',
-          borderRadius: '8px',
-          padding: '6px 12px',
-          fontSize: '12px',
-          fontWeight: 'bold',
-          cursor: 'pointer',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px'
-        }}
-      >
-        {isFullscreen ? '✕ Exit Fullscreen' : '⛶ Maximize Map'}
-      </button>
 
       {/* Tap Mode Banner Hint */}
       {tapMode && (
