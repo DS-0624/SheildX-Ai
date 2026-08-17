@@ -334,7 +334,7 @@ export default function RealMap({
       };
 
   return (
-    <div style={containerStyle}>
+    <div style={containerStyle} className={isFullscreen ? "map-fullscreen-active-container" : ""}>
       <div ref={mapContainerRef} style={{ width: '100%', height: '100%', borderRadius: isFullscreen ? 0 : '12px' }} />
 
       {/* Top Map Control Bar (Mobile & Desktop Responsive) */}

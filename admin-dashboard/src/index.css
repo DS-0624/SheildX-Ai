@@ -376,6 +376,20 @@ body.map-fullscreen-active {
   overflow: hidden !important;
 }
 
-body.map-fullscreen-active .app-header {
+body.map-fullscreen-active .app-header,
+body.map-fullscreen-active .app-footer {
+  display: none !important;
+}
+
+body.map-fullscreen-active .card {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+body.map-fullscreen-active .card > *:not(.map-fullscreen-active-container) {
   display: none !important;
 }
