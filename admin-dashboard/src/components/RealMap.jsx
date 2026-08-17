@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 /**
  * RealMap Component — Renders real interactive OpenStreetMap tiles via Leaflet
@@ -6,9 +6,9 @@ import React, { useEffect, useRef } from 'react';
  * - Real map panning, zooming, tile loading
  * - Start marker (Green), Destination marker (Red), Current Location marker (Blue/Amber)
  * - Click on map to set Destination / Start pin (like Rapido, Uber, Google Maps)
- * - Route polyline path rendering
- * - Live browser geolocation updates
- * - Off-route deviation visualizer
+ * - Turn-by-turn road polyline path rendering (OSRM)
+ * - Advanced Map Themes: Dark, HD Satellite, OpenStreet Standard, Light Day Mode
+ * - 1-Click Fullscreen Maximize Map Mode
  */
 export default function RealMap({
   startPos = { lat: 28.6139, lng: 77.2090, label: 'Start Point' },
@@ -25,11 +25,40 @@ export default function RealMap({
 }) {
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
+  const tileLayerRef = useRef(null);
   const markersRef = useRef([]);
   const polylineRef = useRef(null);
   const deviationLineRef = useRef(null);
   const circleRef = useRef(null);
 
+  const [mapStyle, setMapStyle] = useState('DARK'); // 'DARK' | 'SATELLITE' | 'STREET' | 'LIGHT'
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Map Tile Providers
+  const tileProviders = {
+    DARK: {
+      url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+      attribution: '&copy; CARTO & OpenStreetMap',
+      label: '🌙 Dark'
+    },
+    SATELLITE: {
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+      label: '🛰️ Satellite'
+    },
+    STREET: {
+      url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      attribution: '&copy; OpenStreetMap contributors',
+      label: '🗺️ Street'
+    },
+    LIGHT: {
+      url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+      attribution: '&copy; CARTO & OpenStreetMap',
+      label: '☀️ Day Light'
+    }
+  };
+
+  // Initialize and Update Map
   useEffect(() => {
     if (!mapContainerRef.current) return;
     if (typeof window.L === 'undefined') return;
@@ -47,17 +76,24 @@ export default function RealMap({
         scrollWheelZoom: interactive
       });
 
-      // CartoDB Dark Matter tiles for premium dark design
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        subdomains: 'abcd',
-        maxZoom: 19
+      const initialProvider = tileProviders[mapStyle] || tileProviders.DARK;
+      const tileLayer = L.tileLayer(initialProvider.url, {
+        attribution: initialProvider.attribution,
+        maxZoom: 19,
+        subdomains: 'abcd'
       }).addTo(map);
 
+      tileLayerRef.current = tileLayer;
       mapInstanceRef.current = map;
     }
 
     const map = mapInstanceRef.current;
+
+    // Update Tile Layer if Style Changed
+    if (tileLayerRef.current) {
+      const provider = tileProviders[mapStyle] || tileProviders.DARK;
+      tileLayerRef.current.setUrl(provider.url);
+    }
 
     // Clear existing markers & lines
     markersRef.current.forEach(m => map.removeLayer(m));
@@ -142,18 +178,22 @@ export default function RealMap({
     if (routePoints && routePoints.length > 1) {
       const latLngs = routePoints.map(p => [p.lat, p.lng]);
       
+      const isSat = mapStyle === 'SATELLITE' || mapStyle === 'STREET';
+      const glowColor = isSat ? '#f43f5e' : '#0284c7';
+      const lineColor = isSat ? '#ff0055' : '#38bdf8';
+
       // Outer glow line (Uber/Google Maps navigation style)
       const polylineGlow = L.polyline(latLngs, {
-        color: '#0284c7',
+        color: glowColor,
         weight: 9,
-        opacity: 0.35,
+        opacity: 0.45,
         lineCap: 'round',
         lineJoin: 'round'
       }).addTo(map);
 
       // Inner crisp solid road line
       const polyline = L.polyline(latLngs, {
-        color: '#38bdf8',
+        color: lineColor,
         weight: 5,
         opacity: 1.0,
         lineCap: 'round',
@@ -168,7 +208,7 @@ export default function RealMap({
         const nearestPoint = routePoints[Math.floor(routePoints.length / 2)];
         const devLine = L.polyline([[currentPos.lat, currentPos.lng], [nearestPoint.lat, nearestPoint.lng]], {
           color: '#ef4444',
-          weight: 3,
+          weight: 4,
           dashArray: '4, 4'
         }).addTo(map);
         deviationLineRef.current = devLine;
@@ -182,7 +222,16 @@ export default function RealMap({
       map.setView([currentPos.lat, currentPos.lng], 14);
     }
 
-  }, [startPos, destPos, currentPos, routePoints, isDeviating, accuracyMeters, interactive]);
+  }, [startPos, destPos, currentPos, routePoints, isDeviating, accuracyMeters, interactive, mapStyle]);
+
+  // Handle Fullscreen Invalidate Size
+  useEffect(() => {
+    if (mapInstanceRef.current) {
+      setTimeout(() => {
+        mapInstanceRef.current.invalidateSize();
+      }, 150);
+    }
+  }, [isFullscreen]);
 
   // Handle Map Clicks to Set Pin (Uber/Rapido style)
   useEffect(() => {
@@ -225,18 +274,105 @@ export default function RealMap({
     }
   };
 
+  const containerStyle = isFullscreen
+    ? {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: '100vw',
+        height: '100vh',
+        zIndex: 999999,
+        backgroundColor: '#090d16',
+        borderRadius: 0,
+        isolation: 'isolate'
+      }
+    : {
+        position: 'relative',
+        zIndex: 1,
+        isolation: 'isolate',
+        width: '100%',
+        height: height,
+        borderRadius: '12px',
+        overflow: 'hidden',
+        border: '1px solid #23314e'
+      };
+
   return (
-    <div style={{ position: 'relative', zIndex: 1, isolation: 'isolate', width: '100%', height: height, borderRadius: '12px', overflow: 'hidden', border: '1px solid #23314e' }}>
-      <div ref={mapContainerRef} style={{ width: '100%', height: '100%', borderRadius: '12px' }} />
+    <div style={containerStyle}>
+      <div ref={mapContainerRef} style={{ width: '100%', height: '100%', borderRadius: isFullscreen ? 0 : '12px' }} />
+
+      {/* Advanced Map Layer Switcher Pills */}
+      <div style={{
+        position: 'absolute',
+        top: '12px',
+        right: isFullscreen ? '70px' : '12px',
+        zIndex: 1000,
+        display: 'flex',
+        gap: '4px',
+        background: 'rgba(13, 20, 36, 0.85)',
+        backdropFilter: 'blur(8px)',
+        padding: '4px',
+        borderRadius: '8px',
+        border: '1px solid rgba(255, 255, 255, 0.15)'
+      }}>
+        {Object.keys(tileProviders).map((key) => (
+          <button
+            key={key}
+            onClick={() => setMapStyle(key)}
+            style={{
+              background: mapStyle === key ? '#3b82f6' : 'transparent',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '5px 10px',
+              fontSize: '11px',
+              fontWeight: mapStyle === key ? 'bold' : 'normal',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {tileProviders[key].label}
+          </button>
+        ))}
+      </div>
+
+      {/* Fullscreen Maximize / Exit Toggle Button */}
+      <button
+        onClick={() => setIsFullscreen(!isFullscreen)}
+        title={isFullscreen ? 'Exit Fullscreen Map View' : 'Maximize Map View (View Entire Route)'}
+        style={{
+          position: 'absolute',
+          top: '12px',
+          right: isFullscreen ? '12px' : 'auto',
+          left: isFullscreen ? 'auto' : '12px',
+          zIndex: 1000,
+          background: isFullscreen ? '#ef4444' : 'rgba(13, 20, 36, 0.9)',
+          color: '#ffffff',
+          border: '1px solid #3b82f6',
+          borderRadius: '8px',
+          padding: '6px 12px',
+          fontSize: '12px',
+          fontWeight: 'bold',
+          cursor: 'pointer',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px'
+        }}
+      >
+        {isFullscreen ? '✕ Exit Fullscreen' : '⛶ Maximize Map'}
+      </button>
 
       {/* Tap Mode Banner Hint */}
       {tapMode && (
         <div style={{
           position: 'absolute',
-          top: '12px',
+          top: '54px',
           left: '50%',
           transform: 'translateX(-50%)',
-          zIndex: 10,
+          zIndex: 1000,
           background: tapMode === 'START' ? 'rgba(16, 185, 129, 0.95)' : 'rgba(239, 68, 68, 0.95)',
           color: '#ffffff',
           padding: '6px 16px',
@@ -259,7 +395,7 @@ export default function RealMap({
             position: 'absolute',
             bottom: '12px',
             right: '12px',
-            zIndex: 10,
+            zIndex: 1000,
             background: '#131b2e',
             color: '#3b82f6',
             border: '1px solid #23314e',
