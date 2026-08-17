@@ -41,6 +41,7 @@ export default function App() {
   const [presentationSpeed, setPresentationSpeed] = useState(false); // false = 30s, true = 3s for fast presentation
   const checkIntervalSeconds = presentationSpeed ? 3 : 30;
   const [autoOpenWhatsapp, setAutoOpenWhatsapp] = useState(true);
+  const [deadMansSwitch, setDeadMansSwitch] = useState({ active: false, countdown: 10, triggered: false });
   const [showFullscreenMapModal, setShowFullscreenMapModal] = useState(false);
 
   // --- Dynamic Authenticated User Profile (PERSISTED) ---
@@ -539,6 +540,31 @@ export default function App() {
     }
     return () => clearInterval(timer);
   }, [safetyCheck.active, safetyCheck.timerSeconds, safetyCheck.checkIndex, checkIntervalSeconds]);
+  const handleSimulatePhoneSwitchOff = () => {
+    setDeadMansSwitch({ active: true, countdown: 10, triggered: false });
+    logAudit('DEAD_MANS_SWITCH', 'Phone Switch-Off / Signal Disconnection Simulation Triggered', 'Simulating 10s heartbeat silence...');
+  };
+
+  useEffect(() => {
+    let interval = null;
+    if (deadMansSwitch.active && deadMansSwitch.countdown > 0) {
+      interval = setInterval(() => {
+        setDeadMansSwitch(prev => ({ ...prev, countdown: prev.countdown - 1 }));
+      }, 1000);
+    } else if (deadMansSwitch.active && deadMansSwitch.countdown === 0) {
+      setDeadMansSwitch({ active: false, countdown: 0, triggered: true });
+      logAudit('EMERGENCY_DISPATCH', 'DEAD-MAN\'S SWITCH DISPATCHED BY CLOUD SERVER', 'Phone Switched Off / Silence Detected. Last known GPS sent to all emergency contacts.');
+      
+      const lastLat = journeyForm.startLat.toFixed(4);
+      const lastLng = journeyForm.startLng.toFixed(4);
+      const sosMsg = encodeURIComponent(
+        `🚨 SHIELDX DEAD-MAN'S SWITCH EMERGENCY ALERT\n\nUser: ${userProfile.name}\nStatus: PHONE POWERED OFF / DISCONNECTED DURING ACTIVE JOURNEY\n\nLast Known Location: ${lastLat}° N, ${lastLng}° E\nLast Seen Time: ${new Date().toLocaleTimeString()}\n\nLive Guardian Tracking Link:\n${window.location.origin}/?track=live_session`
+      );
+      const phoneNum = emergencyContacts.length > 0 ? emergencyContacts[0].phone.replace(/[^0-9]/g, '') : '919063080406';
+      window.open(`whatsapp://send?phone=${phoneNum}&text=${sosMsg}`, '_blank');
+    }
+    return () => clearInterval(interval);
+  }, [deadMansSwitch.active, deadMansSwitch.countdown, userProfile.name, journeyForm, emergencyContacts]);
 
   // --- REAL SERVER OTP GENERATION & DISPATCH ---
   const handleRequestOtp = async (e) => {
@@ -1739,6 +1765,34 @@ export default function App() {
               </div>
             </div>
 
+            {deadMansSwitch.active && (
+              <div style={{ background: '#2c0b0e', border: '2px solid #ef4444', color: '#fca5a5', padding: '16px 20px', borderRadius: '16px', marginBottom: '20px', textAlign: 'center' }}>
+                <h4 style={{ fontSize: '16px', fontWeight: '900', color: '#ef4444', margin: 0 }}>
+                  ⚠️ PHONE SWITCH-OFF / DISCONNECTION SIMULATION ({deadMansSwitch.countdown}s)
+                </h4>
+                <p style={{ fontSize: '13px', color: '#cbd5e1', marginTop: '6px', margin: 0 }}>
+                  The phone heartbeat has gone silent. ShieldX Cloud Server Watchdog will automatically dispatch the Emergency SOS to all contacts when the timer reaches 0s.
+                </p>
+              </div>
+            )}
+
+            {deadMansSwitch.triggered && (
+              <div style={{ background: '#2c0b0e', border: '2px solid #ef4444', color: '#ffffff', padding: '20px', borderRadius: '16px', marginBottom: '20px' }}>
+                <h4 style={{ fontSize: '18px', fontWeight: '900', color: '#ef4444', marginBottom: '4px' }}>
+                  🚨 DEAD-MAN'S SWITCH DISPATCHED BY CLOUD SERVER!
+                </h4>
+                <p style={{ fontSize: '13px', color: '#cbd5e1', marginBottom: '12px' }}>
+                  User phone was powered off/disconnected during an active journey. The ShieldX Cloud Server automatically dispatched the Last Known GPS Location ({journeyForm.startLat.toFixed(4)}° N, {journeyForm.startLng.toFixed(4)}° E) and Live Guardian Tracking Link to all Emergency Contacts via WhatsApp & SMS!
+                </p>
+                <button
+                  onClick={() => setDeadMansSwitch({ active: false, countdown: 10, triggered: false })}
+                  style={{ background: '#3b82f6', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
+                >
+                  ✓ Reset Dead-Man's Switch Simulation
+                </button>
+              </div>
+            )}
+
             {journeyState.routeStatus === 'PERSISTENT_DEVIATION' && (
               <div style={{ background: '#2d1a04', border: '2px solid #f59e0b', borderRadius: '16px', padding: '20px', marginBottom: '24px' }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
@@ -1800,6 +1854,15 @@ export default function App() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     <button className="btn-primary" onClick={handleSimulateRouteDeviation} style={{ background: '#f59e0b' }}>
                       ⚠️ Drift Off-Route (Simulate 145m Deviation)
+                    </button>
+
+                    <button
+                      className="btn-danger"
+                      onClick={handleSimulatePhoneSwitchOff}
+                      disabled={deadMansSwitch.active}
+                      style={{ background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', border: '1px solid #ef4444' }}
+                    >
+                      📱 Simulate Phone Switch-Off / Disconnection ({deadMansSwitch.active ? `${deadMansSwitch.countdown}s...` : "Dead-Man's Switch"})
                     </button>
 
                     <button className="btn-success" onClick={handleConfirmSafe}>
