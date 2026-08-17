@@ -15,7 +15,12 @@ const safeNumFixed = (val, decimals = 4) => {
 export default function App() {
   // --- AUTHENTICATION & LOGIN STATE (PERSISTED IN LOCALSTORAGE) ---
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return localStorage.getItem('shieldx_auth') === 'true';
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        return localStorage.getItem('shieldx_auth') === 'true';
+      }
+    } catch (e) {}
+    return false;
   });
   const [authStep, setAuthStep] = useState('PHONE_INPUT'); // 'PHONE_INPUT' or 'OTP_INPUT'
   const [loginPhone, setLoginPhone] = useState('');
@@ -58,17 +63,17 @@ export default function App() {
 
   // --- Dynamic Authenticated User Profile (PERSISTED WITH SAFE FALLBACKS) ---
   const [userProfile, setUserProfile] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('shieldx_user_profile');
-      if (saved) {
-        try {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const saved = localStorage.getItem('shieldx_user_profile');
+        if (saved) {
           const parsed = JSON.parse(saved);
           if (parsed && typeof parsed === 'object' && parsed.name) {
             return { ...defaultProfile, ...parsed };
           }
-        } catch (e) {}
+        }
       }
-    }
+    } catch (e) {}
     return defaultProfile;
   });
 
@@ -90,15 +95,17 @@ export default function App() {
 
   // --- Real Custom Emergency Contacts (PERSISTED IN LOCALSTORAGE) ---
   const [emergencyContacts, setEmergencyContacts] = useState(() => {
-    const saved = localStorage.getItem('shieldx_emergency_contacts');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return parsed.filter(c => !c.id.includes('c_default') && !c.id.includes('c_101'));
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const saved = localStorage.getItem('shieldx_emergency_contacts');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            return parsed.filter(c => !c.id.includes('c_default') && !c.id.includes('c_101'));
+          }
         }
-      } catch (e) {}
-    }
+      }
+    } catch (e) {}
     return [];
   });
 
