@@ -654,7 +654,11 @@ export default function App() {
 
     setActiveTab('safety_check');
     logAudit('ROUTE_MONITOR', 'Persistent Route Deviation Detected (145m off polyline)', 'Started Private Safety Check #1 of 3');
-    sendBrowserNotification("🚨 ShieldX Safety Check", "Route deviation detected (145m off-route). Are you safe?", true);
+    sendBrowserNotification(
+      "🚨 ShieldX Safety Check", 
+      "Route deviation detected (145m off-route). ARE YOU SAFE?\n\n🟢 YES (I am Safe)\n🚨 NO (Send Emergency SOS)", 
+      true
+    );
   };
 
   const handleConfirmSafe = () => {
