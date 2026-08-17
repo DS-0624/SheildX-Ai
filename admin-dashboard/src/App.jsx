@@ -74,9 +74,14 @@ export default function App() {
   const [emergencyContacts, setEmergencyContacts] = useState(() => {
     const saved = localStorage.getItem('shieldx_emergency_contacts');
     if (saved) {
-      try { return JSON.parse(saved); } catch (e) {}
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
     }
-    return [];
+    return [
+      { id: 'c_default_1', name: 'Shaik Sameer (Emergency Contact)', email: 'sameer@sheildx.app', phone: '+91 90630 80406', relationship: 'Family', isVerified: true, sendWhatsapp: true }
+    ];
   });
 
   const [contactForm, setContactForm] = useState({ name: '', email: '', phone: '', relationship: 'Family' });
@@ -1359,6 +1364,37 @@ export default function App() {
           </button>
         </div>
       </header>
+
+      {/* ==================== STICKY REAL-TIME EMERGENCY DISPATCH BANNER ==================== */}
+      {emergencyAlert && emergencyAlert.status !== 'RESOLVED' && (
+        <div style={{ background: '#7f1d1d', borderBottom: '2px solid #ef4444', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', width: '100%', position: 'sticky', top: '56px', zIndex: 9999 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div className="vibrating" style={{ background: '#ef4444', width: '14px', height: '14px', borderRadius: '50%' }}></div>
+            <div>
+              <strong style={{ color: '#ffffff', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                🚨 EMERGENCY SOS ACTIVE FOR {userProfile.name.toUpperCase()}
+              </strong>
+              <p style={{ color: '#fca5a5', fontSize: '11px' }}>Reason: {emergencyAlert.description}</p>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <a
+              href={getWhatsAppLinkForContact(emergencyContacts[0] || { name: 'Emergency Contact', phone: userProfile.phone })}
+              target="_blank"
+              rel="noreferrer"
+              style={{ background: '#25D366', color: '#ffffff', borderRadius: '8px', padding: '10px 16px', fontSize: '13px', fontWeight: 'bold', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 14px rgba(37, 211, 102, 0.5)' }}
+            >
+              <MessageCircle size={18} /> 💬 Send Live GPS Location to Emergency Contact Now
+            </a>
+            <button
+              onClick={handleResolveEmergency}
+              style={{ background: '#1e293b', color: '#cbd5e1', border: '1px solid #475569', borderRadius: '8px', padding: '8px 14px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
+            >
+              ✓ Resolve Alert
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ==================== MAIN NAVIGATION TABS ==================== */}
       <div style={{ backgroundColor: '#0d1424', borderBottom: '1px solid #23314e', padding: '0 16px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
