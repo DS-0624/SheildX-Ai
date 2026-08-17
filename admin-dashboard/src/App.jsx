@@ -1088,7 +1088,7 @@ export default function App() {
         </div>
 
         {/* Dynamic Controls Header & User Logout */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#0d1f18', border: '1px solid #10b981', padding: '6px 12px', borderRadius: '10px' }}>
             <MessageCircle size={14} color="#25D366" />
             <span style={{ fontSize: '11px', color: '#34d399', fontWeight: 'bold' }}>
@@ -1126,7 +1126,7 @@ export default function App() {
       </header>
 
       {/* ==================== MAIN NAVIGATION TABS ==================== */}
-      <div style={{ backgroundColor: '#0d1424', borderBottom: '1px solid #23314e', padding: '0 32px' }}>
+      <div style={{ backgroundColor: '#0d1424', borderBottom: '1px solid #23314e', padding: '0 16px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
         <div style={{ maxWidth: '1440px', margin: '0 auto', display: 'flex', gap: '4px', overflowX: 'auto', padding: '8px 0' }}>
           <button className={`tab-btn ${activeTab === 'journey_setup' ? 'active' : ''}`} onClick={() => setActiveTab('journey_setup')}>
             <Navigation size={16} /> 1. Start Safe Journey
@@ -1815,22 +1815,22 @@ export default function App() {
                   </div>
 
                   {/* REAL ACTIVE GUARDIAN LIVE TRACKING LINK CONTROLS */}
-                  <div style={{ background: '#070a12', border: '1px solid #3b82f6', borderRadius: '12px', padding: '16px', marginBottom: '20px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <div style={{ background: '#070a12', border: '1px solid #3b82f6', borderRadius: '12px', padding: '14px', marginBottom: '20px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
                       <label style={{ fontSize: '12px', fontWeight: '800', color: '#60a5fa' }}>🔗 REAL PUBLIC EMERGENCY LIVE TRACKING URL</label>
                       <button
                         onClick={handleCopyTrackingLink}
-                        style={{ background: '#1e293b', color: '#60a5fa', border: '1px solid #3b82f6', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        style={{ background: '#1e293b', color: '#60a5fa', border: '1px solid #3b82f6', borderRadius: '6px', padding: '6px 12px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                       >
                         <Copy size={12} /> {copiedLinkNotification ? '✓ Copied!' : 'Copy Link'}
                       </button>
                     </div>
 
-                    <div style={{ fontSize: '13px', fontFamily: 'monospace', color: '#ffffff', background: '#0b101d', padding: '10px 12px', borderRadius: '8px', wordBreak: 'break-all', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span>{getDynamicTrackingUrl()}</span>
+                    <div style={{ fontSize: '12px', fontFamily: 'monospace', color: '#ffffff', background: '#0b101d', padding: '10px 12px', borderRadius: '8px', overflowWrap: 'anywhere', wordBreak: 'break-word', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div style={{ minWidth: 0, color: '#38bdf8', fontWeight: 'bold' }}>{getDynamicTrackingUrl()}</div>
                       <button
                         onClick={handleOpenPublicTrackingView}
-                        style={{ background: '#3b82f6', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap', marginLeft: '12px' }}
+                        style={{ background: '#3b82f6', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '10px 14px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%' }}
                       >
                         <LinkIcon size={14} /> Open Live Tracking Stream
                       </button>
