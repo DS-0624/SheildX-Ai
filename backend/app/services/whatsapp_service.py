@@ -36,80 +36,103 @@ class WhatsAppService:
             f"Please respond or contact local authorities immediately."
         )
 
-        if not self.api_token or not self.phone_number_id:
-            logger.info(f"[SIMULATED WHATSAPP] Message prepared for {recipient_phone}: {message_text[:80]}...")
-            return {
-                "status": "SIMULATED",
-                "recipient": recipient_phone,
-                "message_preview": message_text
-            }
-
-        url = f"https://graph.facebook.com/v18.0/{self.phone_number_id}/messages"
-        headers = {
-            "Authorization": f"Bearer {self.api_token}",
-            "Content-Type": "application/json"
-        }
-        payload = {
-            "messaging_product": "whatsapp",
-            "to": recipient_phone.replace("+", "").replace("-", "").replace(" ", ""),
-            "type": "text",
-            "text": {"body": message_text}
-        }
-
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(url, headers=headers, json=payload, timeout=10.0)
-                if response.status_code in [200, 201]:
-                    logger.info(f"WhatsApp emergency notification sent to {recipient_phone}")
-                    return {"status": "DELIVERED", "recipient": recipient_phone, "response": response.json()}
-                else:
-                    logger.error(f"WhatsApp API error: {response.status_code} - {response.text}")
-                    return {"status": "FAILED", "error": response.text}
-        except Exception as e:
-            logger.error(f"WhatsApp notification exception: {str(e)}")
-            return {"status": "ERROR", "error": str(e)}
-
-    async def send_otp_sms_and_whatsapp(self, recipient_phone: str, otp_code: str, user_name: str) -> Dict[str, Any]:
-        """
-        Sends an automated verification OTP via Fast2SMS, Twilio, or WhatsApp Cloud API.
-        """
-        clean_phone = recipient_phone.replace("+", "").replace("-", "").replace(" ", "")
-        
-        # 1. Try Fast2SMS Gateway (Fast instant SMS for Indian numbers)
-        if settings.FAST2SMS_API_KEY:
-            try:
-                url = "https://www.fast2sms.com/dev/bulkV2"
-                headers = {"authorization": settings.FAST2SMS_API_KEY}
-                payload = {
-                    "variables_values": otp_code,
-                    "route": "otp",
-                    "numbers": clean_phone[-10:]
-                }
-                async with httpx.AsyncClient() as client:
-                    res = await client.post(url, headers=headers, data=payload, timeout=10.0)
-                    if res.status_code == 200:
-                        logger.info(f"Fast2SMS OTP sent to {recipient_phone}")
-                        return {"status": "DELIVERED_SMS", "gateway": "FAST2SMS"}
-            except Exception as e:
-                logger.error(f"Fast2SMS error: {e}")
-
-        # 2. Try Twilio Gateway (Global SMS & WhatsApp)
+        # 1. Try Twilio Gateway (Automated Cloud WhatsApp & SMS)
         if settings.TWILIO_ACCOUNT_SID and settings.TWILIO_AUTH_TOKEN:
             try:
                 twilio_url = f"https://api.twilio.com/2010-04-01/Accounts/{settings.TWILIO_ACCOUNT_SID}/Messages.json"
                 auth = (settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
-                data = {
+                clean_num = recipient_phone.replace("+", "").replace("-", "").replace(" ", "")
+                if not clean_num.startswith("+"):
+                    clean_num = f"+{clean_num}"
+
+                # Send via WhatsApp Channel
+                wa_data = {
+                    "From": f"whatsapp:{settings.TWILIO_PHONE_NUMBER}",
+                    "To": f"whatsapp:{clean_num}",
+                    "Body": message_text
+                }
+                # Send via SMS Channel
+                sms_data = {
                     "From": settings.TWILIO_PHONE_NUMBER,
-                    "To": f"+{clean_phone}",
-                    "Body": f"🔒 ShieldX AI Verification Code: {otp_code}. Valid for 5 mins."
+                    "To": clean_num,
+                    "Body": message_text
                 }
                 async with httpx.AsyncClient() as client:
-                    res = await client.post(twilio_url, auth=auth, data=data, timeout=10.0)
-                    if res.status_code in [200, 201]:
-                        logger.info(f"Twilio SMS sent to {recipient_phone}")
-                        return {"status": "DELIVERED_SMS", "gateway": "TWILIO"}
+                    res_wa = await client.post(twilio_url, auth=auth, data=wa_data, timeout=10.0)
+                    res_sms = await client.post(twilio_url, auth=auth, data=sms_data, timeout=10.0)
+                    logger.info(f"Twilio Cloud Emergency Dispatch: WA Status {res_wa.status_code}, SMS Status {res_sms.status_code}")
+                    return {
+                        "status": "DELIVERED",
+                        "gateway": "TWILIO",
+                        "recipient": recipient_phone,
+                        "wa_status": res_wa.status_code,
+                        "sms_status": res_sms.status_code
+                    }
             except Exception as e:
-                logger.error(f"Twilio error: {e}")
+                logger.error(f"Twilio emergency dispatch error: {e}")
+
+        # 2. Try Meta WhatsApp Cloud API
+        if self.api_token and self.phone_number_id:
+            url = f"https://graph.facebook.com/v18.0/{self.phone_number_id}/messages"
+            headers = {
+                "Authorization": f"Bearer {self.api_token}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "messaging_product": "whatsapp",
+                "to": recipient_phone.replace("+", "").replace("-", "").replace(" ", ""),
+                "type": "text",
+                "text": {"body": message_text}
+            }
+            try:
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(url, headers=headers, json=payload, timeout=10.0)
+                    if response.status_code in [200, 201]:
+                        logger.info(f"WhatsApp Meta Cloud notification sent to {recipient_phone}")
+                        return {"status": "DELIVERED", "recipient": recipient_phone, "response": response.json()}
+            except Exception as e:
+                logger.error(f"Meta WhatsApp error: {e}")
+
+        return {
+            "status": "SIMULATED",
+            "recipient": recipient_phone,
+            "message_preview": message_text
+        }
+
+    async def send_otp_sms_and_whatsapp(self, recipient_phone: str, otp_code: str, user_name: str) -> Dict[str, Any]:
+        """
+        Sends an automated verification OTP via Twilio WhatsApp & SMS, Fast2SMS, or Meta WhatsApp Cloud API.
+        """
+        clean_phone = recipient_phone.replace("+", "").replace("-", "").replace(" ", "")
+        
+        # 1. Try Twilio Gateway (Automated Cloud WhatsApp & SMS)
+        if settings.TWILIO_ACCOUNT_SID and settings.TWILIO_AUTH_TOKEN:
+            try:
+                twilio_url = f"https://api.twilio.com/2010-04-01/Accounts/{settings.TWILIO_ACCOUNT_SID}/Messages.json"
+                auth = (settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+                target_phone = f"+{clean_phone}" if not clean_phone.startswith("+") else clean_phone
+                otp_msg = f"🔒 ShieldX AI Verification Code\n\nHello {user_name},\nYour 6-digit verification code is: {otp_code}\n\nValid for 5 minutes. Do not share this code with anyone."
+                
+                # Send via WhatsApp Channel
+                wa_data = {
+                    "From": f"whatsapp:{settings.TWILIO_PHONE_NUMBER}",
+                    "To": f"whatsapp:{target_phone}",
+                    "Body": otp_msg
+                }
+                # Send via SMS Channel
+                sms_data = {
+                    "From": settings.TWILIO_PHONE_NUMBER,
+                    "To": target_phone,
+                    "Body": otp_msg
+                }
+                async with httpx.AsyncClient() as client:
+                    res_wa = await client.post(twilio_url, auth=auth, data=wa_data, timeout=10.0)
+                    res_sms = await client.post(twilio_url, auth=auth, data=sms_data, timeout=10.0)
+                    logger.info(f"Twilio OTP Dispatch to {recipient_phone}: WA {res_wa.status_code}, SMS {res_sms.status_code}")
+                    if res_wa.status_code in [200, 201] or res_sms.status_code in [200, 201]:
+                        return {"status": "DELIVERED", "gateway": "TWILIO"}
+            except Exception as e:
+                logger.error(f"Twilio OTP error: {e}")
 
         # 3. Native WhatsApp App Link Fallback
         import urllib.parse

@@ -653,9 +653,20 @@ export default function App() {
     const nativeWaUrl = `whatsapp://send?phone=${phoneDigits}&text=${waText}`;
     setWhatsappOtpLink(nativeWaUrl);
 
-    // Automatically dispatch real background SMS & WhatsApp OTP via Twilio
+    // Automatically dispatch real background SMS & WhatsApp OTP via Twilio Server-to-Server
     const otpMsg = `🔒 ShieldX AI Verification Code\n\nHello ${loginName},\nYour 6-digit login verification code is: ${code}\n\nValid for 5 minutes. Do not share this code with anyone.`;
     sendAutomatedTwilioEmergencySMS(fullPhone, otpMsg);
+
+    // Call Python FastAPI Backend for Server-to-Server Zero-CORS Dispatch
+    try {
+      fetch('/api/v1/auth/request-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: fullPhone, name: loginName })
+      });
+    } catch (err) {
+      console.warn('Backend API OTP dispatch error:', err);
+    }
 
     // Auto-open WhatsApp app immediately on phone!
     setTimeout(() => {

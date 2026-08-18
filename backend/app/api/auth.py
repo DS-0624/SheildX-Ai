@@ -40,9 +40,21 @@ def request_phone_otp(payload: dict = Body(...)):
         "verified": False
     }
 
+    # Dispatch automated WhatsApp & SMS via Twilio Cloud Gateway (Server-to-Server, ZERO CORS!)
+    from app.services.whatsapp_service import whatsapp_service
+    import asyncio
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            asyncio.create_task(whatsapp_service.send_otp_sms_and_whatsapp(clean_phone, otp_code, name))
+        else:
+            loop.run_until_complete(whatsapp_service.send_otp_sms_and_whatsapp(clean_phone, otp_code, name))
+    except Exception as e:
+        print(f"[OTP Backend Dispatch Error]: {e}")
+
     # Generate deep link to dispatch real WhatsApp OTP to user's phone
     wa_message = f"🔒 *ShieldX AI Verification Code*\n\nHello {name},\nYour 6-digit login verification OTP is: *{otp_code}*\n\nValid for 5 minutes. Do not share this code with anyone."
-    wa_dispatch_url = f"https://wa.me/{clean_phone.replace('+', '')}?text={encode_uri(wa_message)}"
+    wa_dispatch_url = f"whatsapp://send?phone={clean_phone.replace('+', '')}&text={encode_uri(wa_message)}"
 
     return {
         "message": f"Real OTP code generated and sent to {clean_phone} via WhatsApp/SMS",
