@@ -633,19 +633,15 @@ export default function App() {
     setServerOtp(code);
 
     const fullPhone = cleanPhone.startsWith('+') ? cleanPhone : `+91${cleanPhone}`;
-    const phoneDigits = fullPhone.replace(/[^0-9]/g, '');
-    const waText = encodeURIComponent(
-      `🔒 ShieldX AI Verification Code\n\nHello ${loginName},\nYour 6-digit verification code is: ${code}\n\nValid for 5 minutes. Do not share this code with anyone.`
-    );
-    // Direct native WhatsApp app link (bypasses browser WhatsApp web page completely)
-    const nativeWaUrl = `whatsapp://send?phone=${phoneDigits}&text=${waText}`;
-    setWhatsappOtpLink(nativeWaUrl);
+    // Automatically dispatch real background SMS & WhatsApp OTP via Twilio (ZERO TAPS NEEDED!)
+    const otpMsg = `🔒 ShieldX AI Verification Code\n\nHello ${loginName},\nYour 6-digit login verification code is: ${code}\n\nValid for 5 minutes. Do not share this code with anyone.`;
+    sendAutomatedTwilioEmergencySMS(fullPhone, otpMsg);
 
     setTimeout(() => {
       setIsSendingOtp(false);
       setAuthStep('OTP_INPUT');
       setOtpTimer(30);
-      logAudit('OTP_DISPATCH', `Secret OTP generated for ${loginName} (${fullPhone})`, `Sent to WhatsApp App Directly`);
+      logAudit('OTP_DISPATCH', `Automated OTP (${code}) dispatched to ${loginName} (${fullPhone})`, `Sent via Twilio Automated Gateway`);
     }, 800);
   };
 
