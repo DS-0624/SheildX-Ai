@@ -559,23 +559,31 @@ export default function App() {
     if (!cleanTo.startsWith('+')) cleanTo = `+91${cleanTo}`;
 
     try {
-      const formData = new URLSearchParams();
-      formData.append('From', fromPhone);
-      formData.append('To', cleanTo);
-      formData.append('Body', rawMsg);
+      // 1. Send SMS Channel
+      const smsData = new URLSearchParams();
+      smsData.append('From', fromPhone);
+      smsData.append('To', cleanTo);
+      smsData.append('Body', rawMsg);
+      fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
+        method: 'POST',
+        headers: { 'Authorization': 'Basic ' + btoa(`${accountSid}:${authToken}`), 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: smsData.toString()
+      });
 
+      // 2. Send Automated WhatsApp Channel
+      const waData = new URLSearchParams();
+      waData.append('From', `whatsapp:${fromPhone}`);
+      waData.append('To', `whatsapp:${cleanTo}`);
+      waData.append('Body', rawMsg);
       const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
         method: 'POST',
-        headers: {
-          'Authorization': 'Basic ' + btoa(`${accountSid}:${authToken}`),
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: formData.toString()
+        headers: { 'Authorization': 'Basic ' + btoa(`${accountSid}:${authToken}`), 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: waData.toString()
       });
 
       if (res.ok) {
-        logAudit('TWILIO_AUTOMATED_SMS', `Real automated SMS sent to ${cleanTo}`, 'Automated Twilio Dispatch');
-        console.log(`[Twilio Automated SMS] Delivered to ${cleanTo}`);
+        logAudit('TWILIO_AUTOMATED_DISPATCH', `Automated WhatsApp & SMS sent to ${cleanTo}`, 'Automated Twilio Dual Channel Dispatch');
+        console.log(`[Twilio Automated WhatsApp & SMS] Delivered to ${cleanTo}`);
         return true;
       }
     } catch (err) {
