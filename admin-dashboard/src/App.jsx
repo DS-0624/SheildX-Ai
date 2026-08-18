@@ -322,15 +322,7 @@ export default function App() {
     const targetWaUrl = `whatsapp://send?phone=${targetPhone.replace(/[^0-9]/g, '')}&text=${waText}`;
 
     setActiveTab('guardian_hub');
-
-    logAudit('WHATSAPP_DISPATCH', `Emergency Message Dispatched for ${userProfile.name} (${targetPhone})`, `Google Maps: ${googleMapsUrl}`);
-
-    if (autoOpenWhatsapp) {
-      setTimeout(() => {
-        window.location.href = targetWaUrl;
-        logAudit('WHATSAPP_AUTOLAUNCH', `Auto-launched WhatsApp with live location to ${targetPhone}`, targetPhone);
-      }, 400);
-    }
+    logAudit('AUTOMATED_DISPATCH', `100% Silent Background Emergency SMS & WhatsApp Dispatched for ${userProfile.name} (${targetPhone})`, `Google Maps: ${googleMapsUrl}`);
   };
 
   // --- LISTEN FOR SERVICE WORKER NOTIFICATION ACTION CLICKS (YES = SAFE, NO = SOS) ---
@@ -611,17 +603,11 @@ export default function App() {
       const lastLng = journeyForm.startLng.toFixed(4);
       const phoneNum = emergencyContacts.length > 0 ? emergencyContacts[0].phone : '9063080406';
       
-      // 1. Send 100% Automated Background SMS via Twilio (ZERO TAPS NEEDED!)
+      // Send 100% Automated Background SMS & WhatsApp via Twilio (ZERO TAPS NEEDED!)
       sendAutomatedTwilioEmergencySMS(
         phoneNum,
         `🚨 SHIELDX DEAD-MAN'S SWITCH ALERT!\n\nUser ${userProfile.name}'s phone was switched off or disconnected during active journey!\n\nLast Location: ${lastLat}° N, ${lastLng}° E\n\nLive Track: ${window.location.origin}/?track=live_session`
       );
-
-      // 2. Also open native WhatsApp app link as secondary backup
-      const sosMsg = encodeURIComponent(
-        `🚨 SHIELDX DEAD-MAN'S SWITCH EMERGENCY ALERT\n\nUser: ${userProfile.name}\nStatus: PHONE POWERED OFF / DISCONNECTED DURING ACTIVE JOURNEY\n\nLast Known Location: ${lastLat}° N, ${lastLng}° E\nLast Seen Time: ${new Date().toLocaleTimeString()}\n\nLive Guardian Tracking Link:\n${window.location.origin}/?track=live_session`
-      );
-      window.open(`whatsapp://send?phone=${phoneNum.replace(/[^0-9]/g, '')}&text=${sosMsg}`, '_blank');
     }
     return () => clearInterval(interval);
   }, [deadMansSwitch.active, deadMansSwitch.countdown, userProfile.name, journeyForm, emergencyContacts]);
