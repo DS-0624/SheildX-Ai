@@ -567,9 +567,9 @@ export default function App() {
         body: smsData.toString()
       });
 
-      // 2. Send Automated WhatsApp Channel
+      // 2. Send Automated WhatsApp Channel (Twilio Sandbox Number)
       const waData = new URLSearchParams();
-      waData.append('From', `whatsapp:${fromPhone}`);
+      waData.append('From', 'whatsapp:+14155238886');
       waData.append('To', `whatsapp:${cleanTo}`);
       waData.append('Body', rawMsg);
       const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {

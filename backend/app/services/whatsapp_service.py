@@ -45,13 +45,14 @@ class WhatsAppService:
                 if not clean_num.startswith("+"):
                     clean_num = f"+{clean_num}"
 
-                # Send via WhatsApp Channel
+                # Send via Twilio Sandbox WhatsApp Channel (+14155238886)
+                wa_from = "whatsapp:+14155238886"
                 wa_data = {
-                    "From": f"whatsapp:{settings.TWILIO_PHONE_NUMBER}",
+                    "From": wa_from,
                     "To": f"whatsapp:{clean_num}",
                     "Body": message_text
                 }
-                # Send via SMS Channel
+                # Send via Twilio SMS Channel (+17372508034)
                 sms_data = {
                     "From": settings.TWILIO_PHONE_NUMBER,
                     "To": clean_num,
@@ -113,9 +114,9 @@ class WhatsAppService:
                 target_phone = f"+{clean_phone}" if not clean_phone.startswith("+") else clean_phone
                 otp_msg = f"🔒 ShieldX AI Verification Code\n\nHello {user_name},\nYour 6-digit verification code is: {otp_code}\n\nValid for 5 minutes. Do not share this code with anyone."
                 
-                # Send via WhatsApp Channel
+                # Send via Twilio Sandbox WhatsApp Channel (+14155238886)
                 wa_data = {
-                    "From": f"whatsapp:{settings.TWILIO_PHONE_NUMBER}",
+                    "From": "whatsapp:+14155238886",
                     "To": f"whatsapp:{target_phone}",
                     "Body": otp_msg
                 }
