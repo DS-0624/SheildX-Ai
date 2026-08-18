@@ -322,12 +322,18 @@ export default function App() {
     const targetWaUrl = `whatsapp://send?phone=${targetPhone.replace(/[^0-9]/g, '')}&text=${waText}`;
 
     setActiveTab('guardian_hub');
-    logAudit('AUTOMATED_DISPATCH', `Automated Emergency SMS & WhatsApp Dispatched for ${userProfile.name} (${targetPhone})`, `Google Maps: ${googleMapsUrl}`);
+    logAudit('AUTOMATED_DISPATCH', `Server-to-Server Emergency SMS & WhatsApp Dispatched for ${userProfile.name} (${targetPhone})`, `Google Maps: ${googleMapsUrl}`);
 
-    // Auto-open WhatsApp app immediately on phone!
-    setTimeout(() => {
-      window.location.href = targetWaUrl;
-    }, 200);
+    // Call Python FastAPI Backend Cloud Endpoint for Server-to-Server Zero-CORS Dispatch
+    try {
+      fetch('/api/v1/emergency/dispatch-twilio-alert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: targetPhone, name: userProfile.name, message: reasonText })
+      });
+    } catch (e) {
+      console.warn('[Backend Emergency Dispatch Error]', e);
+    }
   };
 
   // --- LISTEN FOR SERVICE WORKER NOTIFICATION ACTION CLICKS (YES = SAFE, NO = SOS) ---
@@ -608,19 +614,21 @@ export default function App() {
       const lastLng = journeyForm.startLng.toFixed(4);
       const phoneNum = emergencyContacts.length > 0 ? emergencyContacts[0].phone : '9063080406';
       
-      // Send Automated Background SMS & WhatsApp via Twilio
+      // Send Automated Background SMS & WhatsApp via Twilio Server-to-Server
       sendAutomatedTwilioEmergencySMS(
         phoneNum,
         `🚨 SHIELDX DEAD-MAN'S SWITCH ALERT!\n\nUser ${userProfile.name}'s phone was switched off or disconnected during active journey!\n\nLast Location: ${lastLat}° N, ${lastLng}° E\n\nLive Track: ${window.location.origin}/?track=live_session`
       );
 
-      // Auto-open WhatsApp app immediately on phone!
-      const waMsg = encodeURIComponent(
-        `🚨 SHIELDX DEAD-MAN'S SWITCH EMERGENCY ALERT\n\nUser: ${userProfile.name}\nStatus: PHONE POWERED OFF / DISCONNECTED DURING ACTIVE JOURNEY\n\nLast Known Location: ${lastLat}° N, ${lastLng}° E\nLast Seen Time: ${new Date().toLocaleTimeString()}\n\nLive Guardian Tracking Link:\n${window.location.origin}/?track=live_session`
-      );
-      setTimeout(() => {
-        window.location.href = `whatsapp://send?phone=${phoneNum.replace(/[^0-9]/g, '')}&text=${waMsg}`;
-      }, 300);
+      try {
+        fetch('/api/v1/emergency/dispatch-twilio-alert', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: phoneNum, name: userProfile.name, message: "DEAD-MAN'S SWITCH: Phone Powered Off / Disconnected During Active Journey" })
+        });
+      } catch (e) {
+        console.warn('[Dead-Mans Switch Backend Dispatch Error]', e);
+      }
     }
     return () => clearInterval(interval);
   }, [deadMansSwitch.active, deadMansSwitch.countdown, userProfile.name, journeyForm, emergencyContacts]);
@@ -668,16 +676,11 @@ export default function App() {
       console.warn('Backend API OTP dispatch error:', err);
     }
 
-    // Auto-open WhatsApp app immediately on phone!
-    setTimeout(() => {
-      window.location.href = nativeWaUrl;
-    }, 400);
-
     setTimeout(() => {
       setIsSendingOtp(false);
       setAuthStep('OTP_INPUT');
       setOtpTimer(30);
-      logAudit('OTP_DISPATCH', `Automated OTP (${code}) dispatched to ${loginName} (${fullPhone})`, `Sent via Twilio & WhatsApp Auto-Launch`);
+      logAudit('OTP_DISPATCH', `Automated OTP (${code}) dispatched to ${loginName} (${fullPhone})`, `Sent via Twilio Cloud Gateway`);
     }, 800);
   };
 

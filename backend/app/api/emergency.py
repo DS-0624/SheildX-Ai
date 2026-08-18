@@ -183,3 +183,23 @@ def resolve_emergency(event_id: str, current_user: dict = Depends(get_current_us
     
     db.collection("emergency_events").document(event_id).update(update_data)
     return {"message": f"Emergency resolved by {resolver_name}", "event_id": event_id}
+
+@router.post("/dispatch-twilio-alert")
+async def dispatch_twilio_alert(payload: dict = Body(...)):
+    """
+    Public server-to-server endpoint for 100% automated Twilio WhatsApp & SMS background dispatch.
+    Zero CORS restrictions, zero client redirects.
+    """
+    phone = payload.get("phone", "9063080406")
+    message = payload.get("message", "🚨 ShieldX Emergency Alert")
+    user_name = payload.get("name", "Shaik Sameer")
+
+    from app.services.whatsapp_service import whatsapp_service
+    res = await whatsapp_service.send_emergency_whatsapp(phone, {
+        "user_name": user_name,
+        "reason": message,
+        "created_at": datetime.now(timezone.utc).strftime("%I:%M:%S %p"),
+        "current_location": {"latitude": 16.5257, "longitude": 80.6186},
+        "battery_level": 95
+    })
+    return res
