@@ -69,4 +69,57 @@ class WhatsAppService:
             logger.error(f"WhatsApp notification exception: {str(e)}")
             return {"status": "ERROR", "error": str(e)}
 
+    async def send_otp_sms_and_whatsapp(self, recipient_phone: str, otp_code: str, user_name: str) -> Dict[str, Any]:
+        """
+        Sends an automated verification OTP via Fast2SMS, Twilio, or WhatsApp Cloud API.
+        """
+        clean_phone = recipient_phone.replace("+", "").replace("-", "").replace(" ", "")
+        
+        # 1. Try Fast2SMS Gateway (Fast instant SMS for Indian numbers)
+        if settings.FAST2SMS_API_KEY:
+            try:
+                url = "https://www.fast2sms.com/dev/bulkV2"
+                headers = {"authorization": settings.FAST2SMS_API_KEY}
+                payload = {
+                    "variables_values": otp_code,
+                    "route": "otp",
+                    "numbers": clean_phone[-10:]
+                }
+                async with httpx.AsyncClient() as client:
+                    res = await client.post(url, headers=headers, data=payload, timeout=10.0)
+                    if res.status_code == 200:
+                        logger.info(f"Fast2SMS OTP sent to {recipient_phone}")
+                        return {"status": "DELIVERED_SMS", "gateway": "FAST2SMS"}
+            except Exception as e:
+                logger.error(f"Fast2SMS error: {e}")
+
+        # 2. Try Twilio Gateway (Global SMS & WhatsApp)
+        if settings.TWILIO_ACCOUNT_SID and settings.TWILIO_AUTH_TOKEN:
+            try:
+                twilio_url = f"https://api.twilio.com/2010-04-01/Accounts/{settings.TWILIO_ACCOUNT_SID}/Messages.json"
+                auth = (settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+                data = {
+                    "From": settings.TWILIO_PHONE_NUMBER,
+                    "To": f"+{clean_phone}",
+                    "Body": f"🔒 ShieldX AI Verification Code: {otp_code}. Valid for 5 mins."
+                }
+                async with httpx.AsyncClient() as client:
+                    res = await client.post(twilio_url, auth=auth, data=data, timeout=10.0)
+                    if res.status_code in [200, 201]:
+                        logger.info(f"Twilio SMS sent to {recipient_phone}")
+                        return {"status": "DELIVERED_SMS", "gateway": "TWILIO"}
+            except Exception as e:
+                logger.error(f"Twilio error: {e}")
+
+        # 3. Native WhatsApp App Link Fallback
+        import urllib.parse
+        wa_text = urllib.parse.quote(f"🔒 ShieldX AI Verification Code\n\nHello {user_name},\nYour 6-digit verification code is: {otp_code}\n\nValid for 5 minutes.")
+        native_wa_url = f"whatsapp://send?phone={clean_phone}&text={wa_text}"
+        
+        return {
+            "status": "NATIVE_DEEP_LINK",
+            "otp_code": otp_code,
+            "whatsapp_url": native_wa_url
+        }
+
 whatsapp_service = WhatsAppService()
