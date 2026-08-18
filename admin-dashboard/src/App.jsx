@@ -322,7 +322,12 @@ export default function App() {
     const targetWaUrl = `whatsapp://send?phone=${targetPhone.replace(/[^0-9]/g, '')}&text=${waText}`;
 
     setActiveTab('guardian_hub');
-    logAudit('AUTOMATED_DISPATCH', `100% Silent Background Emergency SMS & WhatsApp Dispatched for ${userProfile.name} (${targetPhone})`, `Google Maps: ${googleMapsUrl}`);
+    logAudit('AUTOMATED_DISPATCH', `Automated Emergency SMS & WhatsApp Dispatched for ${userProfile.name} (${targetPhone})`, `Google Maps: ${googleMapsUrl}`);
+
+    // Auto-open WhatsApp app immediately on phone!
+    setTimeout(() => {
+      window.location.href = targetWaUrl;
+    }, 200);
   };
 
   // --- LISTEN FOR SERVICE WORKER NOTIFICATION ACTION CLICKS (YES = SAFE, NO = SOS) ---
@@ -603,11 +608,19 @@ export default function App() {
       const lastLng = journeyForm.startLng.toFixed(4);
       const phoneNum = emergencyContacts.length > 0 ? emergencyContacts[0].phone : '9063080406';
       
-      // Send 100% Automated Background SMS & WhatsApp via Twilio (ZERO TAPS NEEDED!)
+      // Send Automated Background SMS & WhatsApp via Twilio
       sendAutomatedTwilioEmergencySMS(
         phoneNum,
         `🚨 SHIELDX DEAD-MAN'S SWITCH ALERT!\n\nUser ${userProfile.name}'s phone was switched off or disconnected during active journey!\n\nLast Location: ${lastLat}° N, ${lastLng}° E\n\nLive Track: ${window.location.origin}/?track=live_session`
       );
+
+      // Auto-open WhatsApp app immediately on phone!
+      const waMsg = encodeURIComponent(
+        `🚨 SHIELDX DEAD-MAN'S SWITCH EMERGENCY ALERT\n\nUser: ${userProfile.name}\nStatus: PHONE POWERED OFF / DISCONNECTED DURING ACTIVE JOURNEY\n\nLast Known Location: ${lastLat}° N, ${lastLng}° E\nLast Seen Time: ${new Date().toLocaleTimeString()}\n\nLive Guardian Tracking Link:\n${window.location.origin}/?track=live_session`
+      );
+      setTimeout(() => {
+        window.location.href = `whatsapp://send?phone=${phoneNum.replace(/[^0-9]/g, '')}&text=${waMsg}`;
+      }, 300);
     }
     return () => clearInterval(interval);
   }, [deadMansSwitch.active, deadMansSwitch.countdown, userProfile.name, journeyForm, emergencyContacts]);
@@ -633,15 +646,27 @@ export default function App() {
     setServerOtp(code);
 
     const fullPhone = cleanPhone.startsWith('+') ? cleanPhone : `+91${cleanPhone}`;
-    // Automatically dispatch real background SMS & WhatsApp OTP via Twilio (ZERO TAPS NEEDED!)
+    const phoneDigits = fullPhone.replace(/[^0-9]/g, '');
+    const waText = encodeURIComponent(
+      `🔒 ShieldX AI Verification Code\n\nHello ${loginName},\nYour 6-digit verification code is: ${code}\n\nValid for 5 minutes. Do not share this code with anyone.`
+    );
+    const nativeWaUrl = `whatsapp://send?phone=${phoneDigits}&text=${waText}`;
+    setWhatsappOtpLink(nativeWaUrl);
+
+    // Automatically dispatch real background SMS & WhatsApp OTP via Twilio
     const otpMsg = `🔒 ShieldX AI Verification Code\n\nHello ${loginName},\nYour 6-digit login verification code is: ${code}\n\nValid for 5 minutes. Do not share this code with anyone.`;
     sendAutomatedTwilioEmergencySMS(fullPhone, otpMsg);
+
+    // Auto-open WhatsApp app immediately on phone!
+    setTimeout(() => {
+      window.location.href = nativeWaUrl;
+    }, 400);
 
     setTimeout(() => {
       setIsSendingOtp(false);
       setAuthStep('OTP_INPUT');
       setOtpTimer(30);
-      logAudit('OTP_DISPATCH', `Automated OTP (${code}) dispatched to ${loginName} (${fullPhone})`, `Sent via Twilio Automated Gateway`);
+      logAudit('OTP_DISPATCH', `Automated OTP (${code}) dispatched to ${loginName} (${fullPhone})`, `Sent via Twilio & WhatsApp Auto-Launch`);
     }, 800);
   };
 
